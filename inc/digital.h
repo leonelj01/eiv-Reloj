@@ -28,6 +28,7 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 #include "config.h"
 #include <stdint.h>
+#include <stdbool.h>
 /* === Header for C++ compatibility ================================================================================ */
 
 #ifdef __cplusplus
@@ -55,7 +56,7 @@ typedef struct digital_input_s *digital_input_t;
  * @param pin 
  * @return digital_output_t 
  */
-digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin);
+digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin, bool state);
 
 /**
  * @brief 

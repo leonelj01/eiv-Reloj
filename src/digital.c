@@ -39,6 +39,7 @@ SPDX-License-Identifier: MIT
 struct digital_output_s {
     uint8_t port; //!< Puerto al que pertenece la salida
     uint8_t pin;  //!< Pin al que pertenece la salida
+    bool    state; //!< Estado inicial de la salida
 };
 
 /* === Private function declarations =============================================================================== */
@@ -51,20 +52,26 @@ struct digital_output_s {
 
 /* === Public function implementation ============================================================================== */
 
-digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin) {
+digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin, bool state) {
     digital_output_t self = malloc(sizeof(struct digital_output_s));
     if (self != NULL) {
         self->port = port;
         self->pin = pin;
+        self->state = state;
+
+        Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->port, self->pin, self->state);
+        Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, self->port, self->pin, true);
     }
 
     return self;
 }
 
 void DigitalOutputActivate(digital_output_t self) {
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->port, self->pin, !self->state);
 }
 
 void DigitalOutputDesactivate(digital_output_t self) {
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->port, self->pin, self->state);
 }
 
 void DigitalOutputToggle(digital_output_t self) {
