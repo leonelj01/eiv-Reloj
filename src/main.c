@@ -40,6 +40,7 @@
 
 /* === Headers files inclusions =============================================================== */
 
+#include "digital.h"
 #include "chip.h"
 #include <stdbool.h>
 
@@ -121,6 +122,8 @@
 
 int main(void) {
 
+    digital_output_t led_green = DigitalOutputCreate(LED_3_GPIO, LED_3_BIT);
+
     int divisor  = 0;
     bool current_state, last_state = false;
 
@@ -185,7 +188,7 @@ int main(void) {
         divisor++;
         if (divisor == 5) {
             divisor = 0;
-            Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT);
+            DigitalOutputToggle(led_green);
         }
 
         for (int index = 0; index < 100; index++) {
