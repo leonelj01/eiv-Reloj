@@ -40,44 +40,56 @@ extern "C" {
 /* === Public data type declarations =============================================================================== */
 
 //! Representa una salidad digital
-typedef struct digital_output_s *digital_output_t;
+typedef struct digitalOutputS * digitalOutputT;
 
 //! Representa una entrada digital
-typedef struct digital_input_s *digital_input_t;
+typedef struct digitalInputS * digitalInputT;
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
 /**
- * @brief 
- * 
- * @param port 
- * @param pin 
- * @return digital_output_t 
+ * @brief
+ *
+ * @param port
+ * @param pin
+ * @return digital_output_t
  */
-digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin, bool state);
+digitalOutputT DigitalOutputCreate(uint8_t port, uint8_t pin, bool state);
 
 /**
- * @brief 
- * 
- * @param self 
+ * @brief
+ *
+ * @param self
  */
-void DigitalOutputActivate(digital_output_t self);
+void DigitalOutputActivate(digitalOutputT self);
 
 /**
- * @brief 
- * 
- * @param self 
+ * @brief
+ *
+ * @param self
  */
-void DigitalOutputDesactivate(digital_output_t self);
+void DigitalOutputDesactivate(digitalOutputT self);
 
 /**
- * @brief 
- * 
- * @param self 
+ * @brief
+ *
+ * @param self
  */
-void DigitalOutputToggle(digital_output_t self);
+void DigitalOutputToggle(digitalOutputT self);
+
+digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool state);
+
+bool DigitalInputGetState(digitalInputT self);
+
+bool DigitalInputHasChanged(digitalInputT self);
+
+void DigitalInputHasActivated(digitalInputT self);
+
+void DigitalInputHasDesactivated(digitalInputT self);
+
+
 
 /* === End of conditional blocks =================================================================================== */
 

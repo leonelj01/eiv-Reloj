@@ -35,13 +35,20 @@ SPDX-License-Identifier: MIT
 
 /* === Private data type declarations ============================================================================== */
 
-//! Representa una entrada digital
-struct digital_output_s {
+//! Representa una salida digital
+struct digitalOutputS {
     uint8_t port; //!< Puerto al que pertenece la salida
     uint8_t pin;  //!< Pin al que pertenece la salida
-    bool    state; //!< Estado inicial de la salida
+    bool state;   //!< Estado inicial de la salida
 };
 
+//! Representa una entrada digital
+struct digitalInputS {
+    uint8_t port;    //!< Puerto al que pertenece la entrada
+    uint8_t pin;     //!< Pin al que pertenece la entrada
+    bool inverted;   //!< Indica si la entrada es invertida
+    bool lastState;  //!< Estado anterior de la entrada
+};
 /* === Private function declarations =============================================================================== */
 
 /* === Private variable definitions ================================================================================ */
@@ -52,8 +59,8 @@ struct digital_output_s {
 
 /* === Public function implementation ============================================================================== */
 
-digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin, bool state) {
-    digital_output_t self = malloc(sizeof(struct digital_output_s));
+digitalOutputT DigitalOutputCreate(uint8_t port, uint8_t pin, bool state) {
+    digitalOutputT self = malloc(sizeof(struct digitalOutputS));
     if (self != NULL) {
         self->port = port;
         self->pin = pin;
@@ -66,15 +73,47 @@ digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin, bool state) {
     return self;
 }
 
-void DigitalOutputActivate(digital_output_t self) {
+void DigitalOutputActivate(digitalOutputT self) {
     Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->port, self->pin, !self->state);
 }
 
-void DigitalOutputDesactivate(digital_output_t self) {
+void DigitalOutputDesactivate(digitalOutputT self) {
     Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->port, self->pin, self->state);
 }
 
-void DigitalOutputToggle(digital_output_t self) {
+void DigitalOutputToggle(digitalOutputT self) {
     Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, self->port, self->pin);
+}
+
+digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool state){
+    digitalInputT self = malloc(sizeof(struct digitalInputS));
+    if (self != NULL) {
+        self->port = port;
+        self->pin = pin;
+        self->inverted = state;
+
+        Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, self->port, self->pin, false);
+    }
+
+    return self;
+}
+
+bool DigitalInputGetState(digitalInputT self){
+    self->lastState = Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, self->port, self->pin);
+
+    if (self->inverted) {
+        return !self->lastState;
+    }
+
+    return self->lastState;
+}
+
+bool DigitalInputHasChanged(digitalInputT self){
+}
+
+void DigitalInputHasActivated(digitalInputT self){
+}
+
+void DigitalInputHasDesactivated(digitalInputT self){
 }
 /* === End of documentation ======================================================================================== */
