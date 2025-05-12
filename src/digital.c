@@ -85,12 +85,12 @@ void DigitalOutputToggle(digitalOutputT self) {
     Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, self->port, self->pin);
 }
 
-digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool state){
+digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted){
     digitalInputT self = malloc(sizeof(struct digitalInputS));
     if (self != NULL) {
         self->port = port;
         self->pin = pin;
-        self->inverted = state;
+        self->inverted = inverted;
 
         Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, self->port, self->pin, false);
     }
@@ -109,6 +109,7 @@ bool DigitalInputGetState(digitalInputT self){
 }
 
 bool DigitalInputHasChanged(digitalInputT self){
+    return false;
 }
 
 void DigitalInputHasActivated(digitalInputT self){

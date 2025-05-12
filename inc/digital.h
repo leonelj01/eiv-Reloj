@@ -50,38 +50,56 @@ typedef struct digitalInputS * digitalInputT;
 /* === Public function declarations ================================================================================ */
 
 /**
- * @brief
+ * @brief Crea un objeto de tipo digitalOutputT
  *
- * @param port
- * @param pin
- * @return digital_output_t
+ * @param port  Puerto al que pertenece la salida
+ * @param pin   Pin al que pertenece la salida
+ * @param state Estado inicial de la salida
+ * @return digitalOutputT Referencia a la salida digital
  */
 digitalOutputT DigitalOutputCreate(uint8_t port, uint8_t pin, bool state);
 
 /**
- * @brief
+ * @brief Permite activar la salida digital
  *
- * @param self
+ * @param self Referencia a la salida digital
  */
 void DigitalOutputActivate(digitalOutputT self);
 
 /**
- * @brief
+ * @brief Permite desactivar la salida digital
  *
- * @param self
+ * @param self Referencia a la salida digital
  */
 void DigitalOutputDesactivate(digitalOutputT self);
 
 /**
- * @brief
+ * @brief Permite alternar el estado de la salida digital
  *
- * @param self
+ * @param self Referencia a la salida digital
  */
 void DigitalOutputToggle(digitalOutputT self);
 
-digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool state);
 
+/**
+ * @brief Crea un objeto de tipo digitalInputT
+ * 
+ * @param port      Puerto al que pertenece la entrada
+ * @param pin       Pin al que pertenece la entrada
+ * @param inverted  Indica si la entrada es de logica invertida 
+ * @return digitalInputT Referencia a la entrada digital 
+ */
+digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted);
+
+/**
+ * @brief Permite obtener el estado de la entrada digital
+ *
+ * @param self Referencia a la entrada digital
+ * @return bool Estado de la entrada digital
+ * @note La función devuelve un True si la entrada está activa o False si está inactiva, sin importar si es de lógica invertida o no.
+ */
 bool DigitalInputGetState(digitalInputT self);
+
 
 bool DigitalInputHasChanged(digitalInputT self);
 
