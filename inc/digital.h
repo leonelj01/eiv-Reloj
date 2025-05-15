@@ -39,6 +39,12 @@ extern "C" {
 
 /* === Public data type declarations =============================================================================== */
 
+typedef enum digitalStates {
+    DIGITAL_INPUT_WAS_DEACTIVATE = -1,
+    DIGITAL_INPUT_NO_CHANGE = 0,
+    DIGITAL_INPUT_WAS_ACTIVATE = 1
+} digitalStates;
+
 //! Representa una salidad digital
 typedef struct digitalOutputS * digitalOutputT;
 
@@ -80,14 +86,13 @@ void DigitalOutputDesactivate(digitalOutputT self);
  */
 void DigitalOutputToggle(digitalOutputT self);
 
-
 /**
  * @brief Crea un objeto de tipo digitalInputT
- * 
+ *
  * @param port      Puerto al que pertenece la entrada
  * @param pin       Pin al que pertenece la entrada
- * @param inverted  Indica si la entrada es de logica invertida 
- * @return digitalInputT Referencia a la entrada digital 
+ * @param inverted  Indica si la entrada es de logica invertida
+ * @return digitalInputT Referencia a la entrada digital
  */
 digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted);
 
@@ -96,18 +101,36 @@ digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted);
  *
  * @param self Referencia a la entrada digital
  * @return bool Estado de la entrada digital
- * @note La función devuelve un True si la entrada está activa o False si está inactiva, sin importar si es de lógica invertida o no.
+ * @note La función devuelve un True si la entrada está activa o False si está inactiva, sin importar si es de lógica
+ * invertida o no.
  */
-bool DigitalInputGetState(digitalInputT self);
+bool DigitalInputGetActivate(digitalInputT self);
 
+/**
+ * @brief Comprueba si hubo un flanco ascendente o descendente
+ *
+ * @param self
+ * @return int
+ */
+digitalStates DigitalInputWasChanged(digitalInputT self);
 
-bool DigitalInputHasChanged(digitalInputT self);
+/**
+ * @brief Comprueba si hubo un flanco ascendente
+ *
+ * @param self
+ * @return true
+ * @return false
+ */
+bool DigitalInputWasActivated(digitalInputT self);
 
-void DigitalInputHasActivated(digitalInputT self);
-
-void DigitalInputHasDesactivated(digitalInputT self);
-
-
+/**
+ * @brief Comprueba si hubo un flanco descendente
+ *
+ * @param self
+ * @return true
+ * @return false
+ */
+bool DigitalInputWasDeactivated(digitalInputT self);
 
 /* === End of conditional blocks =================================================================================== */
 

@@ -44,10 +44,10 @@ struct digitalOutputS {
 
 //! Representa una entrada digital
 struct digitalInputS {
-    uint8_t port;    //!< Puerto al que pertenece la entrada
-    uint8_t pin;     //!< Pin al que pertenece la entrada
-    bool inverted;   //!< Indica si la entrada es invertida
-    bool lastState;  //!< Estado anterior de la entrada
+    uint8_t port;   //!< Puerto al que pertenece la entrada
+    uint8_t pin;    //!< Pin al que pertenece la entrada
+    bool inverted;  //!< Indica si la entrada es invertida
+    bool lastState; //!< Estado anterior de la entrada
 };
 /* === Private function declarations =============================================================================== */
 
@@ -85,7 +85,7 @@ void DigitalOutputToggle(digitalOutputT self) {
     Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, self->port, self->pin);
 }
 
-digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted){
+digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted) {
     digitalInputT self = malloc(sizeof(struct digitalInputS));
     if (self != NULL) {
         self->port = port;
@@ -93,28 +93,44 @@ digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted){
         self->inverted = inverted;
 
         Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, self->port, self->pin, false);
+
+        self->lastState = DigitalInputGetActivate(self);
     }
 
     return self;
 }
 
-bool DigitalInputGetState(digitalInputT self){
-    self->lastState = Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, self->port, self->pin);
+bool DigitalInputGetActivate(digitalInputT self) {
+    bool state = Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, self->port, self->pin);
 
     if (self->inverted) {
-        return !self->lastState;
+        return !state;
     }
 
-    return self->lastState;
+    return state;
 }
 
-bool DigitalInputHasChanged(digitalInputT self){
-    return false;
+digitalStates DigitalInputWasChanged(digitalInputT self) {
+
+    digitalStates result = DIGITAL_INPUT_NO_CHANGE;
+
+    bool stateAct = DigitalInputGetActivate(self);
+
+    if (stateAct && !self->lastState) {
+        result = DIGITAL_INPUT_WAS_ACTIVATE;
+    } else if (!stateAct && self->lastState) {
+        result = DIGITAL_INPUT_WAS_DEACTIVATE;
+    }
+    self->lastState = stateAct;
+
+    return result;
 }
 
-void DigitalInputHasActivated(digitalInputT self){
+bool DigitalInputWasActivated(digitalInputT self) {
+    return DIGITAL_INPUT_WAS_ACTIVATE == DigitalInputWasChanged(self);
 }
 
-void DigitalInputHasDesactivated(digitalInputT self){
+bool DigitalInputWasDeactivated(digitalInputT self) {
+    return DIGITAL_INPUT_WAS_DEACTIVATE == DigitalInputWasChanged(self);
 }
 /* === End of documentation ======================================================================================== */

@@ -123,7 +123,7 @@
 int main(void) {
 
     int divisor = 0;
-    bool current_state, last_state = false;
+    //bool current_state, last_state = false;
 
     Chip_SCU_PinMuxSet(LED_R_PORT, LED_R_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_R_FUNC);
     digitalOutputT ledRed = DigitalOutputCreate(LED_R_GPIO, LED_R_BIT, false);
@@ -158,23 +158,21 @@ int main(void) {
     digitalInputT tec_4 = DigitalInputCreate(TEC_4_GPIO, TEC_4_BIT, true);
 
     while (true) {
-        if (DigitalInputGetState(tec_1)) {
+        if (DigitalInputGetActivate(tec_1)) {
             DigitalOutputActivate(ledRed);
         } else {
             DigitalOutputDesactivate(ledRed);
         }
 
-        current_state = (DigitalInputGetState(tec_2));
-        if ((current_state) && (!last_state)) {
+        if (DigitalInputWasActivated(tec_2)) {
             DigitalOutputToggle(led_3);
         }
-        last_state = current_state;
 
-        if (DigitalInputGetState(tec_3)) {
+        if (DigitalInputWasActivated(tec_3)) {
             DigitalOutputActivate(led_2);
             DigitalOutputActivate(ledGreen);
         }
-        if (DigitalInputGetState(tec_4)) {
+        if (DigitalInputWasDeactivated(tec_4)) {
             DigitalOutputDesactivate(led_2);
             DigitalOutputDesactivate(ledGreen);
         }
