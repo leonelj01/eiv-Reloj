@@ -70,9 +70,9 @@ boardOutputT BoardOutputCreate(void) {
     return self;
 }
 
-boardInputT BoardInputCreate(void){
+boardInputT BoardInputCreate(void) {
 
-    struct boardInputS *self = malloc(sizeof(struct boardInputS));
+    struct boardInputS * self = malloc(sizeof(struct boardInputS));
 
     Chip_SCU_PinMuxSet(TEC_1_PORT, TEC_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_1_FUNC);
     self->tec_1 = DigitalInputCreate(TEC_1_GPIO, TEC_1_BIT, true);

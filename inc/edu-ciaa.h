@@ -21,8 +21,8 @@ SPDX-License-Identifier: MIT
 #ifndef EDU_CIAA_H_
 #define EDU_CIAA_H_
 
-/** @file plantilla.h
- ** @brief Plantilla para la creación de archivos de de cabeceras en lenguaje C
+/** @file edu-ciaa.h
+ ** @brief Definiciones de pines y funciones para la placa EDU-CIAA
  **/
 
 /* === Headers files inclusions ==================================================================================== */

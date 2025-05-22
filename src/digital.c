@@ -25,7 +25,6 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 
 #include "chip.h"
-#include "config.h"
 #include "digital.h"
 #include <stdio.h>
 #include <stdbool.h>

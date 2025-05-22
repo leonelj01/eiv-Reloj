@@ -82,7 +82,7 @@ int main(void) {
             DigitalOutputActivate(output->led_2);
             DigitalOutputActivate(output->ledGreen);
         }
-       if (DigitalInputWasDeactivated(input->tec_4)) {
+        if (DigitalInputWasDeactivated(input->tec_4)) {
             DigitalOutputDesactivate(output->led_2);
             DigitalOutputDesactivate(output->ledGreen);
         }

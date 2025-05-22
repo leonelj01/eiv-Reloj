@@ -26,7 +26,6 @@ SPDX-License-Identifier: MIT
  **/
 
 /* === Headers files inclusions ==================================================================================== */
-#include "config.h"
 #include <stdint.h>
 #include <stdbool.h>
 /* === Header for C++ compatibility ================================================================================ */
@@ -97,9 +96,9 @@ void DigitalOutputToggle(digitalOutputT self);
 digitalInputT DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted);
 
 /**
- * @brief Permite obtener el estado de la entrada digital
+ * @brief Permite saber si la entrada digital está activa.
  *
- * @param self Referencia a la entrada digital
+ * @param self Referencia a un objeto de tipo digitalInput
  * @return bool Estado de la entrada digital
  * @note La función devuelve un True si la entrada está activa o False si está inactiva, sin importar si es de lógica
  * invertida o no.
@@ -109,26 +108,26 @@ bool DigitalInputGetActivate(digitalInputT self);
 /**
  * @brief Comprueba si hubo un flanco ascendente o descendente
  *
- * @param self
- * @return int
+ * @param self referencia a un objeto de tipo digitalInput
+ * @return digitalStates
  */
 digitalStates DigitalInputWasChanged(digitalInputT self);
 
 /**
  * @brief Comprueba si hubo un flanco ascendente
  *
- * @param self
- * @return true
- * @return false
+ * @param self referencia a un objeto de tipo digitalInput
+ * @retval true si hubo un flanco ascendente
+ * @retval false si no hubo un flanco ascendente
  */
 bool DigitalInputWasActivated(digitalInputT self);
 
 /**
  * @brief Comprueba si hubo un flanco descendente
  *
- * @param self
- * @return true
- * @return false
+ * @param self referencia a un objeto de tipo digitalInput
+ * @retval true si hubo un flanco descendente
+ * @retval false si no hubo un flanco descendente
  */
 bool DigitalInputWasDeactivated(digitalInputT self);
 

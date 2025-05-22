@@ -21,8 +21,8 @@ SPDX-License-Identifier: MIT
 #ifndef BSP_H_
 #define BSP_H_
 
-/** @file plantilla.h
- ** @brief Plantilla para la creación de archivos de de cabeceras en lenguaje C
+/** @file bsp.h
+ ** @brief Declaraciones de funciones para el manejo de entradas y salidas digitales mediante una bsp.
  **/
 
 /* === Headers files inclusions ==================================================================================== */
@@ -38,7 +38,7 @@ extern "C" {
 /* === Public macros definitions =================================================================================== */
 
 /* === Public data type declarations =============================================================================== */
-typedef struct boardOutputS{
+typedef struct boardOutputS {
     digitalOutputT ledRed;
     digitalOutputT ledGreen;
     digitalOutputT ledBlue;
@@ -47,20 +47,34 @@ typedef struct boardOutputS{
     digitalOutputT led_2;
     digitalOutputT led_3;
 
-}const *boardOutputT;
+} const * boardOutputT;
 
-typedef struct boardInputS{
+typedef struct boardInputS {
     digitalInputT tec_1;
     digitalInputT tec_2;
     digitalInputT tec_3;
     digitalInputT tec_4;
-} const *boardInputT;
+} const * boardInputT;
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
+/**
+ * @brief Crea un objeto de tipo boardOutputT
+ *
+ * Esta función inicializa los pines de la placa para las salidas digitales.
+ *
+ * @return boardOutputT Referencia a un objeto de tipo boardOutputT
+ */
 boardOutputT BoardOutputCreate(void);
 
+/**
+ * @brief Crea un objeto de tipo boardInputT
+ *
+ * Esta función inicializa los pines de la placa para las entradas digitales.
+ *
+ * @return boardInputT Referencia a un objeto de tipo boardInputT
+ */
 boardInputT BoardInputCreate(void);
 
 /* === End of conditional blocks =================================================================================== */
