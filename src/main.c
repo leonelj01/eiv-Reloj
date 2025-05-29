@@ -62,38 +62,19 @@
 int main(void) {
 
     int divisor = 0;
+    uint8_t value [4] = {1, 2, 3, 4}; 
 
-    boardOutputT output = BoardOutputCreate();
+    boardT board = BoardCreate();
 
-    boardInputT input = BoardInputCreate();
+    ScreenWriteBCD(board->screen, value, sizeof(value));
 
     while (true) {
-        if (DigitalInputGetActivate(input->tec_1)) {
-            DigitalOutputActivate(output->ledRed);
-        } else {
-            DigitalOutputDesactivate(output->ledRed);
-        }
-
-        if (DigitalInputWasActivated(input->tec_2)) {
-            DigitalOutputToggle(output->led_3);
-        }
-
-        if (DigitalInputWasActivated(input->tec_3)) {
-            DigitalOutputActivate(output->led_2);
-            DigitalOutputActivate(output->ledGreen);
-        }
-        if (DigitalInputWasDeactivated(input->tec_4)) {
-            DigitalOutputDesactivate(output->led_2);
-            DigitalOutputDesactivate(output->ledGreen);
-        }
 
         divisor++;
         if (divisor == 5) {
             divisor = 0;
-            DigitalOutputToggle(output->led_1);
-            DigitalOutputToggle(output->ledBlue);
         }
-
+        ScreenRefresh(board->screen);
         for (int index = 0; index < 100; index++) {
             for (int delay = 0; delay < 25000; delay++) {
                 __asm("NOP");

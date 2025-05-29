@@ -25,6 +25,8 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 
 #include "screen.h"
+#include <stddef.h>
+#include <string.h>
 #include <stdint.h>
 
 /* === Macros definitions ========================================================================================== */

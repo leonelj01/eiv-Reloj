@@ -41,7 +41,19 @@ static void DigitsInit(void);
 
 static void SegmentsInit(void);
 
+static void DigitsTurnOff(void);
+
+static void SegmentsUpdates(uint8_t value);
+
+static void DigitTurnOn(uint8_t digit);
+
 /* === Private variable definitions ================================================================================ */
+
+static const struct screenDriverS screenDriver = {
+    .DigitsTurnOff = DigitsTurnOff,
+    .SegmentsUpdates = SegmentsUpdates,
+    .DigitTurnOn = DigitTurnOn
+};
 
 /* === Public variable definitions ================================================================================= */
 
@@ -100,12 +112,44 @@ static void SegmentsInit(void){
     Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, SEGMENT_DP_GPIO, SEGMENT_DP_BIT, true);
 }
 
+static void DigitsTurnOff(void){
+    Chip_GPIO_ClearValue(LPC_GPIO_PORT, DIGITS_GPIO, DIGITS_MASK);
+    Chip_GPIO_ClearValue(LPC_GPIO_PORT, SEGMENTS_GPIO, SEGMENTS_MASK);
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_DP_GPIO, SEGMENT_DP_BIT, false);
+}
+
+static void SegmentsUpdates(uint8_t value){
+    Chip_GPIO_SetValue(LPC_GPIO_PORT, SEGMENTS_GPIO, value & SEGMENTS_MASK);
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_DP_GPIO, SEGMENT_DP_BIT, (value & SEGMENT_DP) != 0);
+}
+
+static void DigitTurnOn(uint8_t digit){
+    switch (digit) {
+        case 0:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_1_GPIO, DIGIT_1_BIT, true);
+            break;
+        case 1:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_2_GPIO, DIGIT_2_BIT, true);
+            break;
+        case 2:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_3_GPIO, DIGIT_3_BIT, true);
+            break;
+        case 3:
+            Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_4_GPIO, DIGIT_4_BIT, true);
+            break;
+        default:
+            break;
+    }
+}
 /* === Public function implementation ============================================================================== */
 
 boardT BoardCreate(void) {
     struct boardS * board = malloc(sizeof(struct boardS));
 
     if (board != NULL) {
+        DigitsInit();
+        SegmentsInit();
+        board->screen = ScreenCreate(4, &screenDriver);
     }
 
     return board;

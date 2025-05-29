@@ -40,7 +40,7 @@ extern "C" {
 
 /* === Public data type declarations =============================================================================== */
 typedef struct boardS {
-    digitalInputT buzzer;
+    digitalOutputT buzzer;
     digitalInputT setTime;
     digitalInputT setAlarm;
     digitalInputT decrement;
