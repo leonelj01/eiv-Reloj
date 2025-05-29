@@ -140,11 +140,11 @@ extern "C" {
 #define SEGMENTS_MASK (SEGMENT_A_MASK | SEGMENT_B_MASK | SEGMENT_C_MASK | \
         SEGMENT_D_MASK | SEGMENT_E_MASK | SEGMENT_F_MASK | SEGMENT_G_MASK )
 
-#define SEGMENT_P_PORT 6
-#define SEGMENT_P_PIN  8
-#define SEGMENT_P_FUNC SCU_MODE_FUNC4
-#define SEGMENT_P_GPIO 5
-#define SEGMENT_P_BIT  16
+#define SEGMENT_DP_PORT 6
+#define SEGMENT_DP_PIN  8
+#define SEGMENT_DP_FUNC SCU_MODE_FUNC4
+#define SEGMENT_DP_GPIO 5
+#define SEGMENT_DP_BIT  16
 
 // Definiciones de los recursos asociados a las teclas del puncho
 #define KEY_F1_PORT 4

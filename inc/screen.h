@@ -36,19 +36,38 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
+#define SEGMENT_A  (1 << 0)
+#define SEGMENT_B  (1 << 1) 
+#define SEGMENT_C  (1 << 2)
+#define SEGMENT_D  (1 << 3)
+#define SEGMENT_E  (1 << 4)
+#define SEGMENT_F  (1 << 5)
+#define SEGMENT_G  (1 << 6)
+#define SEGMENT_DP (1 << 7)
+
 /* === Public data type declarations =============================================================================== */
 
 typedef struct screenS * screenT;
+
+typedef void (*digitsTurnOffT)(void);
+typedef void (*digitTurnOnT)(uint8_t);
+typedef void (*segmentsUpdatesT)(uint8_t);
+
+typedef struct screenDriverS {
+    digitsTurnOffT DigitsTurnOff;
+    segmentsUpdatesT SegmentsUpdates;
+    digitTurnOnT DigitTurnOn;
+} const * screenDriverT;
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
-screenT ScreenCreate(uint8_t digits);
+screenT ScreenCreate(uint8_t digits, screenDriverT driver);
 
-void ScreenWriteBCD(screenT screen, uint8_t * value, uint8_t size);
+void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size);
 
-void ScreenRefresh(screenT screen);
+void ScreenRefresh(screenT self);
 
 /* === End of conditional blocks =================================================================================== */
 

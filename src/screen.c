@@ -38,7 +38,21 @@ SPDX-License-Identifier: MIT
 struct screenS {
     uint8_t digits;
     uint8_t value[SCREEN_MAX_DIGITS];
+    screenDriverT driver;
     uint8_t currentDigit;
+};
+
+static const uint8_t IMAGES[10] = {
+    SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_E | SEGMENT_F,             // 0
+    SEGMENT_B | SEGMENT_C,                                                             // 1
+    SEGMENT_A | SEGMENT_B | SEGMENT_D | SEGMENT_E | SEGMENT_G,                         // 2
+    SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_G,                         // 3
+    SEGMENT_B | SEGMENT_C | SEGMENT_F | SEGMENT_G,                                     // 4
+    SEGMENT_A | SEGMENT_C | SEGMENT_D | SEGMENT_F | SEGMENT_G,                         // 5
+    SEGMENT_A | SEGMENT_C | SEGMENT_D | SEGMENT_E | SEGMENT_F | SEGMENT_G,             // 6
+    SEGMENT_A | SEGMENT_B | SEGMENT_C,                                                 // 7
+    SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_E | SEGMENT_F | SEGMENT_G, // 8
+    SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_F | SEGMENT_G              // 9
 };
 
 /* === Private function declarations =============================================================================== */
@@ -51,23 +65,33 @@ struct screenS {
 
 /* === Public function implementation ============================================================================== */
 
-screenT ScreenCreate(uint8_t digits){
+screenT ScreenCreate(uint8_t digits, screenDriverT driver) {
     screenT self = malloc(sizeof(struct screenS));
     if (digits > SCREEN_MAX_DIGITS) {
         digits = SCREEN_MAX_DIGITS;
     }
     if (self != NULL) {
         self->digits = digits;
+        self->driver = driver;
         self->currentDigit = 0;
     }
 }
 
-void ScreenWriteBCD(screenT screen, uint8_t * value, uint8_t size){
-
+void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size) {
+    memset(self->value, 0, sizeof(self->value)); // establece todos los elementos a 0
+    if (size > self->digits) {
+        size = self->digits;
+    }
+    for (uint8_t i = 0; i < size; i++) {
+        self->value[i] = IMAGES[value[i]];
+    }
 }
 
-void ScreenRefresh(screenT screen){
-
+void ScreenRefresh(screenT self) {
+    self->driver->DigitsTurnOff();
+    self->currentDigit = (self->currentDigit + 1) % self->digits;
+    self->driver->SegmentsUpdates(self->value[self->currentDigit]);
+    self->driver->DigitTurnOn(self->currentDigit);
 }
 
 /* === End of documentation ======================================================================================== */
