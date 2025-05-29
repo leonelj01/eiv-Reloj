@@ -27,6 +27,7 @@ SPDX-License-Identifier: MIT
 #include "screen.h"
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 /* === Macros definitions ========================================================================================== */
@@ -40,6 +41,12 @@ SPDX-License-Identifier: MIT
 struct screenS {
     uint8_t digits;
     uint8_t value[SCREEN_MAX_DIGITS];
+    struct {
+        uint8_t from;
+        uint8_t to;
+        uint8_t count;
+        uint16_t frequency;
+    } flashing[1];
     screenDriverT driver;
     uint8_t currentDigit;
 };
@@ -76,7 +83,10 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver) {
         self->digits = digits;
         self->driver = driver;
         self->currentDigit = 0;
+        self->flashing->count = 0;
+        self->flashing->frequency = 0;
     }
+    return self;
 }
 
 void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size) {
@@ -90,10 +100,43 @@ void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size) {
 }
 
 void ScreenRefresh(screenT self) {
+    uint8_t segments;
+
     self->driver->DigitsTurnOff();
     self->currentDigit = (self->currentDigit + 1) % self->digits;
-    self->driver->SegmentsUpdates(self->value[self->currentDigit]);
+
+    segments = self->value[self->currentDigit];
+    if (self->flashing->frequency != 0) {
+        if (self->currentDigit == 0) {
+            self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
+        }
+        if (self->flashing->count < (self->flashing->frequency / 2)) {
+            if (self->currentDigit >= self->flashing->from) {
+                if (self->currentDigit >= self->flashing->to) {
+                    segments = 0;
+                }
+            }
+        }
+    }
+
+    self->driver->SegmentsUpdates(segments);
     self->driver->DigitTurnOn(self->currentDigit);
+}
+
+int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor) {
+    int result = 0;
+    if (from > to || from >= SCREEN_MAX_DIGITS || to >= SCREEN_MAX_DIGITS) {
+        result = -1; // Error: from debe ser menor o igual a to
+    } else if (!self) {
+        result = -1; // Error: pantalla no inicializada
+    } else {
+        self->flashing->from = from;
+        self->flashing->to = to;
+        self->flashing->frequency = 2 * divisor;
+        self->flashing->count = 0;
+    }
+
+    return result;
 }
 
 /* === End of documentation ======================================================================================== */
