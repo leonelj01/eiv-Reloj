@@ -18,22 +18,28 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-/** @file bsp.c
- ** @brief Plantilla para la creación de archivos de código fuente en lenguaje C
+/** @file screen.c
+ ** @brief Implementación del modulo para la gestión de una pantalla multiplexada de 7 segmentos
  **/
 
 /* === Headers files inclusions ==================================================================================== */
 
-#include "bsp.h"
-#include "chip.h"
-#include "digital.h"
-#include "edu-ciaa.h"
-#include "poncho.h"
-#include <stdlib.h>
+#include "screen.h"
+#include <stdint.h>
 
 /* === Macros definitions ========================================================================================== */
 
+#ifndef SCREEN_MAX_DIGITS
+#define SCREEN_MAX_DIGITS 8
+#endif
+
 /* === Private data type declarations ============================================================================== */
+
+struct screenS {
+    uint8_t digits;
+    uint8_t value[SCREEN_MAX_DIGITS];
+    uint8_t currentDigit;
+};
 
 /* === Private function declarations =============================================================================== */
 
@@ -45,13 +51,23 @@ SPDX-License-Identifier: MIT
 
 /* === Public function implementation ============================================================================== */
 
-boardT BoardCreate(void) {
-    struct boardS * board = malloc(sizeof(struct boardS));
-
-    if (board != NULL) {
+screenT ScreenCreate(uint8_t digits){
+    screenT self = malloc(sizeof(struct screenS));
+    if (digits > SCREEN_MAX_DIGITS) {
+        digits = SCREEN_MAX_DIGITS;
     }
+    if (self != NULL) {
+        self->digits = digits;
+        self->currentDigit = 0;
+    }
+}
 
-    return board;
+void ScreenWriteBCD(screenT screen, uint8_t * value, uint8_t size){
+
+}
+
+void ScreenRefresh(screenT screen){
+
 }
 
 /* === End of documentation ======================================================================================== */

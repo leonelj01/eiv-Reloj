@@ -18,18 +18,16 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-#ifndef BSP_H_
-#define BSP_H_
+#ifndef SCREEN_H_
+#define SCREEN_H_
 
-/** @file bsp.h
- ** @brief Declaraciones de funciones para el manejo de entradas y salidas digitales mediante una bsp.
+/** @file screen.h
+ ** @brief Declaraciones de funciones para el manejo del display de 7 segmentos
  **/
 
 /* === Headers files inclusions ==================================================================================== */
-
-#include "digital.h"
-#include "screen.h"
-
+#include <stdint.h>
+#include <stdbool.h>
 /* === Header for C++ compatibility ================================================================================ */
 
 #ifdef __cplusplus
@@ -39,26 +37,18 @@ extern "C" {
 /* === Public macros definitions =================================================================================== */
 
 /* === Public data type declarations =============================================================================== */
-typedef struct boardS {
-    digitalInputT buzzer;
-    digitalInputT setTime;
-    digitalInputT setAlarm;
-    digitalInputT decrement;
-    digitalInputT increment;
-    digitalInputT accept;
-    digitalInputT cancel;
-    screenT screen;
-} const * boardT;
+
+typedef struct screenS * screenT;
+
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
-/**
- * @brief  Crea una nueva instancia de la placa.
- *
- * @return boardT Referencia a la nueva instancia de la placa.
- */
-boardT BoardCreate(void);
+screenT ScreenCreate(uint8_t digits);
+
+void ScreenWriteBCD(screenT screen, uint8_t * value, uint8_t size);
+
+void ScreenRefresh(screenT screen);
 
 /* === End of conditional blocks =================================================================================== */
 
@@ -66,4 +56,4 @@ boardT BoardCreate(void);
 }
 #endif
 
-#endif /* BSP_H_ */
+#endif /* SCREEN_H_ */
