@@ -67,7 +67,7 @@ int main(void) {
     boardT board = BoardCreate();
 
     ScreenWriteBCD(board->screen, value, sizeof(value));
-    ScreenFlashDigits(board->screen, 2, 3, 50);
+    ScreenFlashDigits(board->screen, 1, 2, 50);
 
     while (true) {
 
@@ -75,6 +75,7 @@ int main(void) {
         if (divisor == 5) {
             divisor = 0;
         }
+
         ScreenRefresh(board->screen);
 
         for (int delay = 0; delay < 25000; delay++) {

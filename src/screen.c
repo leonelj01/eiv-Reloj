@@ -66,11 +66,39 @@ static const uint8_t IMAGES[10] = {
 
 /* === Private function declarations =============================================================================== */
 
+/**
+ * @brief Controla el parpadeo del display.
+ * 
+ * @param self Puntero a la instancia de la pantalla.
+ * 
+ * @return El valor de los segmentos a mostrar en el dígito actual.
+ * 
+ * @note Si la frecuencia de parpadeo es 0, no se realiza el parpadeo y se devuelve el valor del dígito actual.
+ */
+static uint8_t Flashing(screenT self);
+
 /* === Private variable definitions ================================================================================ */
 
 /* === Public variable definitions ================================================================================= */
 
 /* === Private function definitions ================================================================================ */
+
+static uint8_t Flashing(screenT self){
+    uint8_t result = self->value[self->currentDigit];
+    if (self->flashing->frequency != 0) {
+        if (self->currentDigit == 0) {
+            self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
+        }
+        if (self->flashing->count < (self->flashing->frequency / 2)) {
+            if (self->currentDigit >= self->flashing->from) {
+                if (self->currentDigit <= self->flashing->to) {
+                    result = 0;
+                }
+            }
+        }
+    }
+    return result;
+}
 
 /* === Public function implementation ============================================================================== */
 
@@ -105,19 +133,7 @@ void ScreenRefresh(screenT self) {
     self->driver->DigitsTurnOff();
     self->currentDigit = (self->currentDigit + 1) % self->digits;
 
-    segments = self->value[self->currentDigit];
-    if (self->flashing->frequency != 0) {
-        if (self->currentDigit == 0) {
-            self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
-        }
-        if (self->flashing->count < (self->flashing->frequency / 2)) {
-            if (self->currentDigit >= self->flashing->from) {
-                if (self->currentDigit >= self->flashing->to) {
-                    segments = 0;
-                }
-            }
-        }
-    }
+    segments = Flashing(self);
 
     self->driver->SegmentsUpdates(segments);
     self->driver->DigitTurnOn(self->currentDigit);

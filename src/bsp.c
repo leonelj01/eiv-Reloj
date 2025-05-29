@@ -29,6 +29,7 @@ SPDX-License-Identifier: MIT
 #include "digital.h"
 #include "edu-ciaa.h"
 #include "poncho.h"
+#include "screen.h"
 #include <stdlib.h>
 
 /* === Macros definitions ========================================================================================== */
@@ -41,10 +42,24 @@ static void DigitsInit(void);
 
 static void SegmentsInit(void);
 
+/**
+ * @brief Apaga todos los dígitos del display.
+ *
+ */
 static void DigitsTurnOff(void);
 
+/**
+ * @brief Actualiza los segmentos del display con el valor proporcionado.
+ *
+ * @param value Valor que se mostrará en los segmentos del display.
+ */
 static void SegmentsUpdates(uint8_t value);
 
+/**
+ * @brief Enciende el dígito especificado en el display.
+ *
+ * @param digit Índice del dígito a encender (0 a 3).
+ */
 static void DigitTurnOn(uint8_t digit);
 
 /* === Private variable definitions ================================================================================ */
@@ -122,6 +137,7 @@ static void SegmentsUpdates(uint8_t value) {
 static void DigitTurnOn(uint8_t digit) {
     Chip_GPIO_SetValue(LPC_GPIO_PORT, DIGITS_GPIO, (1 << (3 - digit)) & DIGITS_MASK);
 }
+
 /* === Public function implementation ============================================================================== */
 
 boardT BoardCreate(void) {

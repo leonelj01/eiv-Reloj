@@ -63,10 +63,30 @@ typedef struct screenDriverS {
 
 /* === Public function declarations ================================================================================ */
 
+/**
+ * @brief Función para crear una nueva instancia de la pantalla.
+ *
+ * @param digits    Número de dígitos del display.
+ * @param driver    Puntero a la estructura que contiene las funciones del driver del display.
+ * 
+ * @return screenT Puntero a la nueva instancia de la pantalla.
+ */
 screenT ScreenCreate(uint8_t digits, screenDriverT driver);
 
+/**
+ * @brief Función para escribir un valor en formato BCD en la pantalla.
+ *
+ * @param self      Puntero a la instancia de la pantalla.
+ * @param value     Puntero al arreglo que contiene los valores BCD a escribir.
+ * @param size      Tamaño del arreglo de valores BCD.
+ */
 void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size);
 
+/**
+ * @brief Función para refrescar la pantalla, actualizando el dígito actual.
+ *
+ * @param self  Puntero a la instancia de la pantalla.
+ */
 void ScreenRefresh(screenT self);
 
 /**
@@ -76,6 +96,8 @@ void ScreenRefresh(screenT self);
  * @param from          Posición del primer dígito desde el cual se comenzará a parpadear.
  * @param to            Posición del último dígito hasta el cual se parpadeará.
  * @param frecuency     Frecuencia de parpadeo en milisegundos.
+ * 
+ * @return int Retorna 0 si la operación fue exitosa, -1 si hubo un error.
  */
 int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
