@@ -62,7 +62,7 @@
 int main(void) {
 
     int divisor = 0;
-    uint8_t value [4] = {1, 2, 3, 4}; 
+    uint8_t value[4] = {1, 2, 3, 4};
 
     boardT board = BoardCreate();
 
@@ -75,10 +75,9 @@ int main(void) {
             divisor = 0;
         }
         ScreenRefresh(board->screen);
-        for (int index = 0; index < 100; index++) {
-            for (int delay = 0; delay < 25000; delay++) {
-                __asm("NOP");
-            }
+
+        for (int delay = 0; delay < 25000; delay++) {
+            __asm("NOP");
         }
     }
 }

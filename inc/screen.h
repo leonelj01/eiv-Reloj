@@ -37,7 +37,7 @@ extern "C" {
 /* === Public macros definitions =================================================================================== */
 
 #define SEGMENT_A  (1 << 0)
-#define SEGMENT_B  (1 << 1) 
+#define SEGMENT_B  (1 << 1)
 #define SEGMENT_C  (1 << 2)
 #define SEGMENT_D  (1 << 3)
 #define SEGMENT_E  (1 << 4)
