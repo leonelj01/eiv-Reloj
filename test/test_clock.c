@@ -18,8 +18,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-/** @file plantilla.c
- ** @brief Plantilla para la creación de archivos de código fuente en lenguaje C
+/** @file test_clock.c
+ ** @brief Archivo de pruebas unitarias para el reloj.
  **/
 
 /* === Headers files inclusions ==================================================================================== */
@@ -29,20 +29,41 @@ SPDX-License-Identifier: MIT
 #include <stdint.h>
 
 /* === Testing functions =========================================================================================== */
+
 /**
- * - Al iniciar el reloj esta en 00:00.
- * - Al ajusta la hora 
- * 
+ * - Al inicializar el reloj está en 00:00 y con hora invalida.
+ * - Después de n ciclos de reloj la hora avanza un segundo, diez
+ *   segundos, un minutos, diez minutos, una hora, diez horas y un día completo.
+ * - Fijar la hora de la alarma y consultarla.
+ * - Fijar la alarma y avanzar el reloj para que suene.
+ * - Fijar la alarma, deshabilitarla y avanzar el reloj para no suene.
+ * - Hacer sonar la alarma y posponerla.
+ * - Hacer sonar la alarma y cancelarla hasta el otro dia.
+ * - Probar getTime con NULL como argumento.
+ * - Tratar de ajustar la hora el reloj con valores invalidos y verificarque los rechaza.
+ *
  */
-void test_set_up_with_invalid_time(void){
-    clockTimeT currentTime = {
-        .bcd = {1,2,3,4,5,6} 
-    };
-    
+
+void test_set_up_with_invalid_time(void) {
+    clockTimeT currentTime = {.bcd = {1, 2, 3, 4, 5, 6}};
+
     clockT clock = ClockCreate();
     TEST_ASSERT_FALSE(ClockGetTime(clock, &currentTime)); // Decidir si hacer una sola funcion o no
     TEST_ASSERT_EACH_EQUAL_UINT8(0, currentTime.bcd, 6);
 }
 
+// Al ajustar la hora el reloj con valores correctos, queda en hora y es válida.
+void test_set_up_and_adjust_with_valid_time(void) {
+    static const clockTimeT newTime = {.time = {
+                                           .seconds = {4, 5}, .minutes = {3, 0}, .hours = {1, 4} // 14:30:45
+                                       }};
+    clockTimeT currentTime = {.bcd = {0, 0, 0, 0, 0, 0}};
+    clockT clock = ClockCreate();
+
+    TEST_ASSERT_TRUE(ClockSetTime(clock, &newTime));
+    TEST_ASSERT_TRUE(ClockGetTime(clock, &currentTime));
+
+    TEST_ASSERT_EQUAL_INT8_ARRAY(newTime.bcd, currentTime.bcd, 6);
+}
 
 /* === End of documentation ======================================================================================== */

@@ -57,6 +57,7 @@ clockT ClockCreate(void);
 
 bool ClockGetTime(clockT clock, clockTimeT *currentTime);
 
+bool ClockSetTime(clockT clock, const clockTimeT *NewTime);
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus
