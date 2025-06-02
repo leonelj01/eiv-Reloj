@@ -41,14 +41,29 @@ SPDX-License-Identifier: MIT
  * - Hacer sonar la alarma y cancelarla hasta el otro dia.
  * - Probar getTime con NULL como argumento.
  * - Tratar de ajustar la hora el reloj con valores invalidos y verificarque los rechaza.
- *
+ * - Hacer una prueba con frecuencias diferentes.
+ * 
  */
+
+#define CLOCK_TICK_PER_SECONDS 5
+
+static void SimulateSeconds(clockT clock, uint32_t seconds) {
+    for (uint8_t i = 0; i < seconds; i++) {
+        ClockNewTick(clock);
+    }
+}
+
+clockT clock;
+
+void setUp(void){
+    clock = ClockCreate(CLOCK_TICK_PER_SECONDS);
+}
 
 void test_set_up_with_invalid_time(void) {
     clockTimeT currentTime = {.bcd = {1, 2, 3, 4, 5, 6}};
 
-    clockT clock = ClockCreate();
-    TEST_ASSERT_FALSE(ClockGetTime(clock, &currentTime)); // Decidir si hacer una sola funcion o no
+    clockT localClock = ClockCreate(CLOCK_TICK_PER_SECONDS);
+    TEST_ASSERT_FALSE(ClockGetTime(localClock, &currentTime)); // Decidir si hacer una sola funcion o no
     TEST_ASSERT_EACH_EQUAL_UINT8(0, currentTime.bcd, 6);
 }
 
@@ -58,12 +73,26 @@ void test_set_up_and_adjust_with_valid_time(void) {
                                            .seconds = {4, 5}, .minutes = {3, 0}, .hours = {1, 4} // 14:30:45
                                        }};
     clockTimeT currentTime = {.bcd = {0, 0, 0, 0, 0, 0}};
-    clockT clock = ClockCreate();
 
     TEST_ASSERT_TRUE(ClockSetTime(clock, &newTime));
     TEST_ASSERT_TRUE(ClockGetTime(clock, &currentTime));
 
     TEST_ASSERT_EQUAL_INT8_ARRAY(newTime.bcd, currentTime.bcd, 6);
+}
+
+// Despues de n ciclos de reloj la hora avanza un segundo
+void test_clock_advance_one_second(void){
+    clockTimeT currentTime = {0};
+    static const clockTimeT espectedValue = {.time = {
+                                           .seconds = {1, 0}, .minutes = {0,0}, .hours = {0,0} // 14:30:45
+                                       }};
+
+    // set initial time to 00:00:00
+    ClockSetTime(clock,&(clockTimeT){0});
+    SimulateSeconds(clock, 1);
+    ClockGetTime(clock, &currentTime);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(espectedValue.bcd,currentTime.bcd,6);
+        
 }
 
 /* === End of documentation ======================================================================================== */

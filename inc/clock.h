@@ -53,11 +53,13 @@ typedef struct clockS * clockT;
 
 /* === Public function declarations ================================================================================ */
 
-clockT ClockCreate(void);
+clockT ClockCreate(uint16_t ticksPerSecond);
 
 bool ClockGetTime(clockT clock, clockTimeT *currentTime);
 
 bool ClockSetTime(clockT clock, const clockTimeT *NewTime);
+
+void ClockNewTick(clockT clock);
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus
