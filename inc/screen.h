@@ -51,7 +51,7 @@ typedef struct screenS * screenT;
 
 typedef void (*digitsTurnOffT)(void);
 typedef void (*digitTurnOnT)(uint8_t);
-typedef void (*segmentsUpdatesT)(uint8_t);
+typedef void (*segmentsUpdatesT)(uint8_t,uint8_t);
 
 typedef struct screenDriverS {
     digitsTurnOffT DigitsTurnOff;
@@ -80,7 +80,7 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver);
  * @param value     Puntero al arreglo que contiene los valores BCD a escribir.
  * @param size      Tamaño del arreglo de valores BCD.
  */
-void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size);
+void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size, uint8_t *dots);
 
 /**
  * @brief Función para refrescar la pantalla, actualizando el dígito actual.
@@ -99,7 +99,7 @@ void ScreenRefresh(screenT self);
  * 
  * @return int Retorna 0 si la operación fue exitosa, -1 si hubo un error.
  */
-int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency);
+int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency, uint8_t selector);
 
 /* === End of conditional blocks =================================================================================== */
 

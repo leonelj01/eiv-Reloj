@@ -62,12 +62,13 @@
 int main(void) {
 
     int divisor = 0;
-    uint8_t value[4] = {1, 2, 3, 4};
+    uint8_t value[4] = {1, 4, 0, 5};
+    uint8_t dots[4] = {0, 1, 0, 0};
 
     boardT board = BoardCreate();
 
-    ScreenWriteBCD(board->screen, value, sizeof(value));
-    ScreenFlashDigits(board->screen, 1, 2, 50);
+    ScreenWriteBCD(board->screen, value, sizeof(value), dots);
+    ScreenFlashDigits(board->screen, 1, 2, 50, 1);
 
     while (true) {
 

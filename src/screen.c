@@ -41,11 +41,13 @@ SPDX-License-Identifier: MIT
 struct screenS {
     uint8_t digits;
     uint8_t value[SCREEN_MAX_DIGITS];
+    uint8_t dots[SCREEN_MAX_DIGITS];
     struct {
         uint8_t from;
         uint8_t to;
         uint8_t count;
         uint16_t frequency;
+        uint8_t selector; // 0: Digits, 1: Dots
     } flashing[1];
     screenDriverT driver;
     uint8_t currentDigit;
@@ -61,7 +63,7 @@ static const uint8_t IMAGES[10] = {
     SEGMENT_A | SEGMENT_C | SEGMENT_D | SEGMENT_E | SEGMENT_F | SEGMENT_G,             // 6
     SEGMENT_A | SEGMENT_B | SEGMENT_C,                                                 // 7
     SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_E | SEGMENT_F | SEGMENT_G, // 8
-    SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_F | SEGMENT_G              // 9
+    SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_F | SEGMENT_G,             // 9
 };
 
 /* === Private function declarations =============================================================================== */
@@ -75,7 +77,7 @@ static const uint8_t IMAGES[10] = {
  * 
  * @note Si la frecuencia de parpadeo es 0, no se realiza el parpadeo y se devuelve el valor del dígito actual.
  */
-static uint8_t Flashing(screenT self);
+static uint8_t FlashingDig(screenT self);
 
 /* === Private variable definitions ================================================================================ */
 
@@ -83,8 +85,25 @@ static uint8_t Flashing(screenT self);
 
 /* === Private function definitions ================================================================================ */
 
-static uint8_t Flashing(screenT self){
+static uint8_t FlashingDig(screenT self){
     uint8_t result = self->value[self->currentDigit];
+    if (self->flashing->frequency != 0) {
+        if (self->currentDigit == 0) {
+            self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
+        }
+        if (self->flashing->count < (self->flashing->frequency / 2)) {
+            if (self->currentDigit >= self->flashing->from) {
+                if (self->currentDigit <= self->flashing->to) {
+                    result = 0;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+static uint8_t FlashingDot(screenT self){
+    uint8_t result = self->dots[self->currentDigit];
     if (self->flashing->frequency != 0) {
         if (self->currentDigit == 0) {
             self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
@@ -117,29 +136,41 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver) {
     return self;
 }
 
-void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size) {
+void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size, uint8_t *dots) {
     memset(self->value, 0, sizeof(self->value)); // establece todos los elementos a 0
+    memset(self->dots, 0, sizeof(self->dots)); // establece todos los elementos a 0
+
     if (size > self->digits) {
         size = self->digits;
     }
     for (uint8_t i = 0; i < size; i++) {
         self->value[i] = IMAGES[value[i]];
+        self->dots[i] = dots[i] ? SEGMENT_DP : 0; // Si dots es NULL, se asigna 0
     }
 }
 
 void ScreenRefresh(screenT self) {
-    uint8_t segments;
+    uint8_t segments, dots;
 
     self->driver->DigitsTurnOff();
     self->currentDigit = (self->currentDigit + 1) % self->digits;
 
-    segments = Flashing(self);
+    if(self->flashing->selector == 0) {
+        segments = FlashingDig(self);
+    } else {
+        segments = self->value[self->currentDigit];
+    }
+    if(self->flashing->selector == 1) {
+        dots = FlashingDot(self);
+    } else {
+        dots = self->dots[self->currentDigit];
+    }
 
-    self->driver->SegmentsUpdates(segments);
+    self->driver->SegmentsUpdates(segments, dots);
     self->driver->DigitTurnOn(self->currentDigit);
 }
 
-int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor) {
+int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor, uint8_t selector) {
     int result = 0;
     if (from > to || from >= SCREEN_MAX_DIGITS || to >= SCREEN_MAX_DIGITS) {
         result = -1; // Error: from debe ser menor o igual a to
@@ -150,6 +181,7 @@ int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor) 
         self->flashing->to = to;
         self->flashing->frequency = 2 * divisor;
         self->flashing->count = 0;
+        self->flashing->selector = selector;
     }
 
     return result;
