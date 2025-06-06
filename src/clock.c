@@ -18,8 +18,8 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-/** @file plantilla.c
- ** @brief Plantilla para la creación de archivos de código fuente en lenguaje C
+/** @file clock.c
+ ** @brief Implementación de las funciones del reloj
  **/
 
 /* === Headers files inclusions ==================================================================================== */
@@ -31,10 +31,10 @@ SPDX-License-Identifier: MIT
 
 /* === Private data type declarations ============================================================================== */
 
-struct clockS{
+struct clockS {
+    uint16_t clockTicks;
     clockTimeT currentTime;
     bool valid;
-
 };
 
 /* === Private function declarations =============================================================================== */
@@ -45,28 +45,60 @@ struct clockS{
 
 /* === Private function definitions ================================================================================ */
 
+static void ClockAdvanceTime(clockT self) {
+    self->currentTime.time.seconds[0]++;
+    if(self->currentTime.time.seconds[0] > 9) {
+        self->currentTime.time.seconds[0] = 0;
+        self->currentTime.time.seconds[1]++;
+    }
+    if(self->currentTime.time.seconds[1] > 5) {
+        self->currentTime.time.seconds[1] = 0;
+        self->currentTime.time.minutes[0]++;
+    }
+    if(self->currentTime.time.minutes[0] > 9) {
+        self->currentTime.time.minutes[0] = 0;
+        self->currentTime.time.minutes[1]++;
+    }
+    if(self->currentTime.time.minutes[1] > 5) {
+        self->currentTime.time.minutes[1] = 0;
+        self->currentTime.time.hours[0]++;
+    }
+    if(self->currentTime.time.hours[0] > 9) {
+        self->currentTime.time.hours[0] = 0;
+        self->currentTime.time.hours[1]++;
+    }
+    if(self->currentTime.time.hours[1] == 2 && self->currentTime.time.hours[0] > 3) {
+        self->currentTime.time.hours[0] = 0;
+        self->currentTime.time.hours[1] = 0;
+    }
+}
+
 /* === Public function implementation ============================================================================== */
 
-clockT ClockCreate(uint16_t ticksPerSeconds){
+clockT ClockCreate(uint16_t ticksPerSeconds) {
     (void)ticksPerSeconds;
     static struct clockS self[1];
-    memset(self,0,sizeof(struct clockS));
+    memset(self, 0, sizeof(struct clockS));
     self->valid = false;
     return self;
 }
 
-bool ClockGetTime(clockT self, clockTimeT *result){
-    memcpy(result, &self->currentTime,sizeof(clockTimeT));
+bool ClockGetTime(clockT self, clockTimeT * result) {
+    memcpy(result, &self->currentTime, sizeof(clockTimeT));
     return self->valid;
 }
 
-bool ClockSetTime(clockT self, const clockTimeT *newTime){
+bool ClockSetTime(clockT self, const clockTimeT * newTime) {
     self->valid = true;
-    memcpy(&self->currentTime,newTime,sizeof(clockTimeT));
+    memcpy(&self->currentTime, newTime, sizeof(clockTimeT));
     return self->valid;
 }
 
-void ClockNewTick(clockT self){
-    self->currentTime.time.seconds[0] = 1;
+void ClockNewTick(clockT self) {
+    self->clockTicks++;
+    if (self->clockTicks == 5) {
+        self->clockTicks = 0;
+        ClockAdvanceTime(self);
+    }
 }
 /* === End of documentation ======================================================================================== */

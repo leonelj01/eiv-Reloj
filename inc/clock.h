@@ -21,8 +21,8 @@ SPDX-License-Identifier: MIT
 #ifndef CLOCK_H_
 #define CLOCK_H_
 
-/** @file plantilla.h
- ** @brief Plantilla para la creación de archivos de de cabeceras en lenguaje C
+/** @file clock.h
+ ** @brief declaraciones de funciones para el manejo del reloj
  **/
 
 /* === Headers files inclusions ==================================================================================== */
