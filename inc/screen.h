@@ -79,6 +79,7 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver);
  * @param self      Puntero a la instancia de la pantalla.
  * @param value     Puntero al arreglo que contiene los valores BCD a escribir.
  * @param size      Tamaño del arreglo de valores BCD.
+ * @param dots      Puntero al arreglo que indica si se debe mostrar el punto decimal en cada dígito.
  */
 void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size, uint8_t *dots);
 
@@ -96,6 +97,9 @@ void ScreenRefresh(screenT self);
  * @param from          Posición del primer dígito desde el cual se comenzará a parpadear.
  * @param to            Posición del último dígito hasta el cual se parpadeará.
  * @param frecuency     Frecuencia de parpadeo en milisegundos.
+ * @param selector      Selector para indicar qué tipo de parpadeo se realizará:
+ *                     - 0: Parpadeo de los dígitos.
+ *                     - 1: Parpadeo del punto decimal.
  * 
  * @return int Retorna 0 si la operación fue exitosa, -1 si hubo un error.
  */

@@ -63,14 +63,36 @@ int main(void) {
 
     int divisor = 0;
     uint8_t value[4] = {1, 4, 0, 5};
-    uint8_t dots[4] = {0, 1, 0, 0};
+    uint8_t dots[4] = {1, 1, 1, 1};
 
     boardT board = BoardCreate();
 
     ScreenWriteBCD(board->screen, value, sizeof(value), dots);
-    ScreenFlashDigits(board->screen, 1, 2, 50, 1);
+    ScreenFlashDigits(board->screen, 1, 1, 50, 1);
 
     while (true) {
+
+        if(DigitalInputWasActivated(board->increment)){
+            DigitalOutputToggle(board->ledGreen);
+        }
+
+        if(DigitalInputWasActivated(board->decrement)){
+            DigitalOutputToggle(board->ledRed);
+        }
+
+        if(DigitalInputWasActivated(board->setTime)){
+            DigitalOutputActivate(board->ledBlue);
+        }else if (DigitalInputWasDeactivated(board->setAlarm)){
+            DigitalOutputDesactivate(board->ledBlue);
+        }
+
+        if(DigitalInputWasActivated(board->cancel)){
+            DigitalOutputToggle(board->ledRed);
+        }
+
+        if(DigitalInputWasDeactivated(board->accept)){
+            DigitalOutputToggle(board->ledGreen);
+        }
 
         divisor++;
         if (divisor == 5) {

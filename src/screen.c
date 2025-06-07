@@ -47,7 +47,7 @@ struct screenS {
         uint8_t to;
         uint8_t count;
         uint16_t frequency;
-        uint8_t selector; // 0: Digits, 1: Dots
+        uint8_t selector; // 0: Digits, 1: Dots, -1: No flashing
     } flashing[1];
     screenDriverT driver;
     uint8_t currentDigit;
@@ -70,14 +70,25 @@ static const uint8_t IMAGES[10] = {
 
 /**
  * @brief Controla el parpadeo del display.
- * 
+ *
  * @param self Puntero a la instancia de la pantalla.
- * 
+ *
  * @return El valor de los segmentos a mostrar en el dígito actual.
- * 
+ *
  * @note Si la frecuencia de parpadeo es 0, no se realiza el parpadeo y se devuelve el valor del dígito actual.
  */
 static uint8_t FlashingDig(screenT self);
+
+/**
+ * @brief Controla el parpadeo del punto decimal del display.
+ *
+ * @param self Puntero a la instancia de la pantalla.
+ *
+ * @return El valor del punto decimal a mostrar en el dígito actual.
+ *
+ * @note Si la frecuencia de parpadeo es 0, no se realiza el parpadeo y se devuelve el valor del punto decimal actual.
+ */
+static uint8_t FlashingDot(screenT self);
 
 /* === Private variable definitions ================================================================================ */
 
@@ -85,9 +96,9 @@ static uint8_t FlashingDig(screenT self);
 
 /* === Private function definitions ================================================================================ */
 
-static uint8_t FlashingDig(screenT self){
+static uint8_t FlashingDig(screenT self) {
     uint8_t result = self->value[self->currentDigit];
-    if (self->flashing->frequency != 0) {
+    if (self->flashing->frequency != 0 && self->flashing->selector == 0) {
         if (self->currentDigit == 0) {
             self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
         }
@@ -102,9 +113,9 @@ static uint8_t FlashingDig(screenT self){
     return result;
 }
 
-static uint8_t FlashingDot(screenT self){
+static uint8_t FlashingDot(screenT self) {
     uint8_t result = self->dots[self->currentDigit];
-    if (self->flashing->frequency != 0) {
+    if (self->flashing->frequency != 0 && self->flashing->selector == 1) {
         if (self->currentDigit == 0) {
             self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
         }
@@ -132,13 +143,14 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver) {
         self->currentDigit = 0;
         self->flashing->count = 0;
         self->flashing->frequency = 0;
+        self->flashing->selector = -1; // Por defecto, no parpadea
     }
     return self;
 }
 
-void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size, uint8_t *dots) {
+void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size, uint8_t * dots) {
     memset(self->value, 0, sizeof(self->value)); // establece todos los elementos a 0
-    memset(self->dots, 0, sizeof(self->dots)); // establece todos los elementos a 0
+    memset(self->dots, 0, sizeof(self->dots));   // establece todos los elementos a 0
 
     if (size > self->digits) {
         size = self->digits;
@@ -155,16 +167,8 @@ void ScreenRefresh(screenT self) {
     self->driver->DigitsTurnOff();
     self->currentDigit = (self->currentDigit + 1) % self->digits;
 
-    if(self->flashing->selector == 0) {
-        segments = FlashingDig(self);
-    } else {
-        segments = self->value[self->currentDigit];
-    }
-    if(self->flashing->selector == 1) {
-        dots = FlashingDot(self);
-    } else {
-        dots = self->dots[self->currentDigit];
-    }
+    segments = FlashingDig(self);
+    dots = FlashingDot(self);
 
     self->driver->SegmentsUpdates(segments, dots);
     self->driver->DigitTurnOn(self->currentDigit);
