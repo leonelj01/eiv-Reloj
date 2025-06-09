@@ -103,8 +103,18 @@ void ScreenRefresh(screenT self);
  * 
  * @return int Retorna 0 si la operación fue exitosa, -1 si hubo un error.
  */
-int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency, uint8_t selector);
+int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
+/**
+ * @brief Funcion para parpadear los puntos del display.
+ * 
+ * @param self      
+ * @param from 
+ * @param to 
+ * @param divisor 
+ * @return int 
+ */
+int ScreenFlashDots(screenT self, uint8_t from, uint8_t to, uint16_t divisor);
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus

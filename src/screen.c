@@ -48,7 +48,7 @@ struct screenS {
         uint8_t count;
         uint16_t frequency;
         uint8_t selector; // 0: Digits, 1: Dots, -1: No flashing
-    } flashing[1];
+    } flashingDigits[1], flashingDots[1];
     screenDriverT driver;
     uint8_t currentDigit;
 };
@@ -98,13 +98,13 @@ static uint8_t FlashingDot(screenT self);
 
 static uint8_t FlashingDig(screenT self) {
     uint8_t result = self->value[self->currentDigit];
-    if (self->flashing->frequency != 0 && self->flashing->selector == 0) {
+    if (self->flashingDigits->frequency != 0 && self->flashingDigits->selector == 0) {
         if (self->currentDigit == 0) {
-            self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
+            self->flashingDigits->count = (self->flashingDigits->count + 1) % self->flashingDigits->frequency;
         }
-        if (self->flashing->count < (self->flashing->frequency / 2)) {
-            if (self->currentDigit >= self->flashing->from) {
-                if (self->currentDigit <= self->flashing->to) {
+        if (self->flashingDigits->count < (self->flashingDigits->frequency / 2)) {
+            if (self->currentDigit >= self->flashingDigits->from) {
+                if (self->currentDigit <= self->flashingDigits->to) {
                     result = 0;
                 }
             }
@@ -115,13 +115,13 @@ static uint8_t FlashingDig(screenT self) {
 
 static uint8_t FlashingDot(screenT self) {
     uint8_t result = self->dots[self->currentDigit];
-    if (self->flashing->frequency != 0 && self->flashing->selector == 1) {
+    if (self->flashingDots->frequency != 0 && self->flashingDots->selector == 1) {
         if (self->currentDigit == 0) {
-            self->flashing->count = (self->flashing->count + 1) % self->flashing->frequency;
+            self->flashingDots->count = (self->flashingDots->count + 1) % self->flashingDots->frequency;
         }
-        if (self->flashing->count < (self->flashing->frequency / 2)) {
-            if (self->currentDigit >= self->flashing->from) {
-                if (self->currentDigit <= self->flashing->to) {
+        if (self->flashingDots->count < (self->flashingDots->frequency / 2)) {
+            if (self->currentDigit >= self->flashingDots->from) {
+                if (self->currentDigit <= self->flashingDots->to) {
                     result = 0;
                 }
             }
@@ -141,9 +141,10 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver) {
         self->digits = digits;
         self->driver = driver;
         self->currentDigit = 0;
-        self->flashing->count = 0;
-        self->flashing->frequency = 0;
-        self->flashing->selector = -1; // Por defecto, no parpadea
+        self->flashingDigits->count = 0;
+        self->flashingDigits->frequency = 0;
+        self->flashingDots->count = 0;
+        self->flashingDots->frequency = 0;
     }
     return self;
 }
@@ -174,21 +175,37 @@ void ScreenRefresh(screenT self) {
     self->driver->DigitTurnOn(self->currentDigit);
 }
 
-int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor, uint8_t selector) {
+int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor) {
     int result = 0;
     if (from > to || from >= SCREEN_MAX_DIGITS || to >= SCREEN_MAX_DIGITS) {
         result = -1; // Error: from debe ser menor o igual a to
     } else if (!self) {
         result = -1; // Error: pantalla no inicializada
     } else {
-        self->flashing->from = from;
-        self->flashing->to = to;
-        self->flashing->frequency = 2 * divisor;
-        self->flashing->count = 0;
-        self->flashing->selector = selector;
+        self->flashingDigits->from = from;
+        self->flashingDigits->to = to;
+        self->flashingDigits->frequency = 2 * divisor;
+        self->flashingDigits->count = 0;
+        self->flashingDigits->selector = 0;
     }
 
     return result;
 }
 
+int ScreenFlashDots(screenT self, uint8_t from, uint8_t to, uint16_t divisor) {
+    int result = 0;
+    if (from > to || from >= SCREEN_MAX_DIGITS || to >= SCREEN_MAX_DIGITS) {
+        result = -1; // Error: from debe ser menor o igual a to
+    } else if (!self) {
+        result = -1; // Error: pantalla no inicializada
+    } else {
+        self->flashingDots->from = from;
+        self->flashingDots->to = to;
+        self->flashingDots->frequency = 2 * divisor;
+        self->flashingDots->count = 0;
+        self->flashingDots->selector = 1;
+    }
+
+    return result;
+}
 /* === End of documentation ======================================================================================== */
