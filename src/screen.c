@@ -149,15 +149,24 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver) {
     return self;
 }
 
-void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size, uint8_t * dots) {
+void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size) {
     memset(self->value, 0, sizeof(self->value)); // establece todos los elementos a 0
-    memset(self->dots, 0, sizeof(self->dots));   // establece todos los elementos a 0
 
     if (size > self->digits) {
         size = self->digits;
     }
     for (uint8_t i = 0; i < size; i++) {
         self->value[i] = IMAGES[value[i]];
+    }
+}
+
+void ScreenWriteDot(screenT self, uint8_t * dots, uint8_t size){
+    memset(self->dots, 0, sizeof(self->dots));   // establece todos los elementos a 0
+
+    if (size > self->digits) {
+        size = self->digits;
+    }
+    for (uint8_t i = 0; i < size; i++) {
         self->dots[i] = dots[i] ? SEGMENT_DP : 0; // Si dots es NULL, se asigna 0
     }
 }

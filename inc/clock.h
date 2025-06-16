@@ -39,12 +39,18 @@ extern "C" {
 
 /* === Public data type declarations =============================================================================== */
 
+typedef enum AlarmActions {
+    ALARM_SNOOZE, //!< Posponer la alarma
+    ALARM_CANCEL, //!< Cancelar la alarma
+    ALARM_DISABLE //!< Desactivar la alarma
+} AlarmActions;
+
 typedef union {
-struct {
-    uint8_t seconds[2];
-    uint8_t minutes[2];
-    uint8_t hours[2];
-} time;
+    struct {
+        uint8_t seconds[2];
+        uint8_t minutes[2];
+        uint8_t hours[2];
+    } time;
     uint8_t bcd[6];
 } clockTimeT;
 
@@ -55,15 +61,23 @@ typedef struct clockS * clockT;
 
 clockT ClockCreate(uint16_t ticksPerSecond);
 
-bool ClockGetTime(clockT clock, clockTimeT *currentTime);
+bool ClockGetTime(clockT clock, clockTimeT * currentTime);
 
-bool ClockSetTime(clockT clock, const clockTimeT *NewTime);
+bool ClockSetTime(clockT clock, const clockTimeT * NewTime);
 
 void ClockNewTick(clockT clock);
+
+bool ClockSetAlarm(clockT clock, const clockTimeT * alarm);
+
+bool ClockGetAlarm(clockT clock, clockTimeT * alarm);
+
+bool ClockIsAlarmActive(clockT clock);
+
+void ClockAlarmAction(clockT clock, AlarmActions action);
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CLOCK_H_ */
+#endif /* CLOCK_H */

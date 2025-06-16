@@ -34,13 +34,13 @@ SPDX-License-Identifier: MIT
  * - Al inicializar el reloj está en 00:00 y con hora invalida.
  * - Después de n ciclos de reloj la hora avanza un segundo, diez
  *   segundos, un minutos, diez minutos, una hora, diez horas y un día completo.
+ * - Tratar de ajustar la hora el reloj con valores invalidos y verificar que los rechaza.
  * - Fijar la hora de la alarma y consultarla.
  * - Fijar la alarma y avanzar el reloj para que suene.
  * - Fijar la alarma, deshabilitarla y avanzar el reloj para no suene.
  * - Hacer sonar la alarma y posponerla.
  * - Hacer sonar la alarma y cancelarla hasta el otro dia.
  * - Probar getTime con NULL como argumento.
- * - Tratar de ajustar la hora el reloj con valores invalidos y verificarque los rechaza.
  * - Hacer una prueba con frecuencias diferentes.
  *
  */
@@ -56,8 +56,19 @@ SPDX-License-Identifier: MIT
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(hourUnits, currentTime.bcd[4], "Diference in unit hours");                         \
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(hourTens, currentTime.bcd[5], "Diference in tens hours")
 
+#define TEST_ASSERT_ALARM(hourTens, hourUnits, minutesTens, minutesUnits, secondsTens, secondsUnits)                   \
+    clockTimeT alarmTime = {0};                                                                                        \
+    TEST_ASSERT_TRUE_MESSAGE(ClockGetAlarm(clock, &alarmTime), "Clock has invalid time");                              \
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(secondsUnits, alarmTime.bcd[0], "Diference in unit seconds");                      \
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(secondsTens, alarmTime.bcd[1], "Diference in tens seconds");                       \
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(minutesUnits, alarmTime.bcd[2], "Diference in unit minutes");                      \
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(minutesTens, alarmTime.bcd[3], "Diference in tens minutes");                       \
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(hourUnits, alarmTime.bcd[4], "Diference in unit hours");                           \
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(hourTens, alarmTime.bcd[5], "Diference in tens hours");
+
 static void SimulateSeconds(clockT clock, uint32_t seconds) {
-    for (uint8_t i = 0; i < CLOCK_TICK_PER_SECONDS * seconds; i++) {
+    uint32_t ticks = CLOCK_TICK_PER_SECONDS * seconds;
+    for (uint32_t i = 0; i < ticks; i++) {
         ClockNewTick(clock);
     }
 }
@@ -68,6 +79,7 @@ void setUp(void) {
     clock = ClockCreate(CLOCK_TICK_PER_SECONDS);
 }
 
+// Al inicializar el reloj está en 00:00:00 y con hora invalida.
 void test_set_up_with_invalid_time(void) {
     clockTimeT currentTime = {.bcd = {1, 2, 3, 4, 5, 6}};
 
@@ -83,6 +95,12 @@ void test_set_up_and_adjust_with_valid_time(void) {
                                        }};
     TEST_ASSERT_TRUE(ClockSetTime(clock, &newTime));
     TEST_ASSERT_TIME(1, 4, 3, 0, 4, 5);
+}
+
+// Tratar de ajustar la hora el reloj con valores invalidos y verificar que los rechaza.
+void test_set_up_and_adjust_with_invalid_time(void) {
+    static const clockTimeT newTime = {.bcd = {9, 9, 9, 9, 9, 9}}; // Hora invalida
+    TEST_ASSERT_FALSE(ClockSetTime(clock, &newTime));
 }
 
 // Despues de n ciclos de reloj la hora avanza un segundo
@@ -151,6 +169,73 @@ void test_clock_advance_one_day(void) {
                                       }});
     SimulateSeconds(clock, 12);
     TEST_ASSERT_TIME(0, 0, 0, 0, 0, 1);
+}
+
+// Fijar la hora de la alarma y consultarla.
+void test_clock_set_and_get_alarm_time(void) {
+    static const clockTimeT alarm = {.time = {
+                                             .hours = {2, 2}, .minutes = {0, 0}, .seconds = {0, 0} // 22:00:00
+                                         }};
+
+    TEST_ASSERT_TRUE(ClockSetAlarm(clock, &alarm));
+    TEST_ASSERT_ALARM(2, 2, 0, 0, 0, 0); // Verifica que la alarma se haya establecido correctamente
+}
+
+// Fijar la alarma y avanzar el reloj para que suene.
+void test_clock_set_alarm_and_advance_to_ring(void) {
+    static const clockTimeT alarmTime = {.time = {
+                                             .hours = {0, 1}, .minutes = {0, 0}, .seconds = {0, 0} // 10:00:00
+                                         }};
+
+    ClockSetTime(clock, &(clockTimeT){.time = {
+                                          .hours = {9, 0}, .minutes = {9, 5}, .seconds = {9, 4} // 09:59:49
+                                      }});
+
+    ClockSetAlarm(clock, &alarmTime);
+    SimulateSeconds(clock, 11);
+    TEST_ASSERT_TRUE(ClockIsAlarmActive(clock)); // Verifica que la alarma esté activa
+}
+
+// Fijar la alarma, deshabilitarla y avanzar el reloj para no suene.
+void test_clock_set_alarm_and_disable(void) {
+    static const clockTimeT alarmTime = {.time = {
+                                             .hours = {0, 1}, .minutes = {0, 3}, .seconds = {0, 0} // 10:30:00
+                                         }};
+
+    ClockSetTime(clock, &(clockTimeT){.time = {
+                                          .hours = {0, 1}, .minutes = {9, 2}, .seconds = {9, 4} // 09:59:49
+                                      }});
+
+    ClockSetAlarm(clock, &alarmTime);
+    ClockAlarmAction(clock, ALARM_DISABLE); // Deshabilita la alarma
+    SimulateSeconds(clock, 11);
+    TEST_ASSERT_FALSE(ClockIsAlarmActive(clock)); // Verifica que la alarma no esté activa
+}
+
+// Probar getTime con NULL como argumento.
+void test_clock_get_time_with_null_argument(void) {
+    clockTimeT *nullTime = NULL;
+    TEST_ASSERT_FALSE(ClockGetTime(clock, nullTime)); // Verifica que no se pueda obtener la hora con NULL
+}
+
+// Hacer sonar la alarma y posponerla.
+void test_clock_ring_and_postpone_alarm(void) {
+    static const clockTimeT alarm = {.time = {
+                                             .hours = {0, 1}, .minutes = {0, 1}, .seconds = {0, 0} // 10:10:00
+                                         }};
+
+    ClockSetTime(clock, &(clockTimeT){.time = {
+                                          .hours = {0, 1}, .minutes = {9, 0}, .seconds = {0, 0} // 10:09:00
+                                      }});
+
+    ClockSetAlarm(clock, &alarm);
+    SimulateSeconds(clock, 60);
+    TEST_ASSERT_TRUE(ClockIsAlarmActive(clock)); // Verifica que la alarma esté activa
+    ClockAlarmAction(clock, ALARM_SNOOZE); // Pospone la alarma
+    TEST_ASSERT_ALARM(1, 0, 1, 5, 0, 0); // Verifica que la alarma se haya pospuesto correctamente
+    SimulateSeconds(clock, 300);
+    TEST_ASSERT_TRUE(ClockIsAlarmActive(clock)); // Verifica que la alarma esté activa
+
 }
 
 /* === End of documentation ======================================================================================== */

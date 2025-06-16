@@ -47,6 +47,7 @@ struct digitalInputS {
     uint8_t pin;    //!< Pin al que pertenece la entrada
     bool inverted;  //!< Indica si la entrada es invertida
     bool lastState; //!< Estado anterior de la entrada
+    
 };
 /* === Private function declarations =============================================================================== */
 
