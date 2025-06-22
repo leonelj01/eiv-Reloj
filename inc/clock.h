@@ -40,9 +40,9 @@ extern "C" {
 /* === Public data type declarations =============================================================================== */
 
 typedef enum AlarmActions {
-    ALARM_SNOOZE, //!< Posponer la alarma
     ALARM_CANCEL, //!< Cancelar la alarma
-    ALARM_DISABLE //!< Desactivar la alarma
+    ALARM_DISABLE, //!< Desactivar la alarma
+    ALARM_ENABLE  //!< Habilitar la alarma
 } AlarmActions;
 
 typedef union {
@@ -55,6 +55,15 @@ typedef union {
 } clockTimeT;
 
 typedef struct clockS * clockT;
+
+typedef void (*clockAlarmRingingT)(clockT clock);
+
+// Esta estructura definirá las acciones del reloj: control de los display, alarmas, etc.
+typedef struct clockDriverS {
+    clockAlarmRingingT AlarmRinging; //!< Callback para la alarma
+} const * clockDriverT;
+// Esta estructura sera para luego 
+
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
@@ -74,6 +83,12 @@ bool ClockGetAlarm(clockT clock, clockTimeT * alarm);
 bool ClockIsAlarmActive(clockT clock);
 
 void ClockAlarmAction(clockT clock, AlarmActions action);
+
+bool ClockIsAlarmEnabled(clockT clock);
+
+void ClockSnoozeAlarm(clockT clock, uint8_t minutes);
+
+bool ClockAlarmRinging(clockT clock);
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus

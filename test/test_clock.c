@@ -174,8 +174,8 @@ void test_clock_advance_one_day(void) {
 // Fijar la hora de la alarma y consultarla.
 void test_clock_set_and_get_alarm_time(void) {
     static const clockTimeT alarm = {.time = {
-                                             .hours = {2, 2}, .minutes = {0, 0}, .seconds = {0, 0} // 22:00:00
-                                         }};
+                                         .hours = {2, 2}, .minutes = {0, 0}, .seconds = {0, 0} // 22:00:00
+                                     }};
 
     TEST_ASSERT_TRUE(ClockSetAlarm(clock, &alarm));
     TEST_ASSERT_ALARM(2, 2, 0, 0, 0, 0); // Verifica que la alarma se haya establecido correctamente
@@ -209,20 +209,20 @@ void test_clock_set_alarm_and_disable(void) {
     ClockSetAlarm(clock, &alarmTime);
     ClockAlarmAction(clock, ALARM_DISABLE); // Deshabilita la alarma
     SimulateSeconds(clock, 11);
-    TEST_ASSERT_FALSE(ClockIsAlarmActive(clock)); // Verifica que la alarma no esté activa
+    TEST_ASSERT_FALSE(ClockAlarmRinging(clock)); // Verifica que la alarma no esté activa
 }
 
 // Probar getTime con NULL como argumento.
 void test_clock_get_time_with_null_argument(void) {
-    clockTimeT *nullTime = NULL;
+    clockTimeT * nullTime = NULL;
     TEST_ASSERT_FALSE(ClockGetTime(clock, nullTime)); // Verifica que no se pueda obtener la hora con NULL
 }
 
 // Hacer sonar la alarma y posponerla.
 void test_clock_ring_and_postpone_alarm(void) {
     static const clockTimeT alarm = {.time = {
-                                             .hours = {0, 1}, .minutes = {0, 1}, .seconds = {0, 0} // 10:10:00
-                                         }};
+                                         .hours = {0, 1}, .minutes = {0, 1}, .seconds = {0, 0} // 10:10:00
+                                     }};
 
     ClockSetTime(clock, &(clockTimeT){.time = {
                                           .hours = {0, 1}, .minutes = {9, 0}, .seconds = {0, 0} // 10:09:00
@@ -230,12 +230,53 @@ void test_clock_ring_and_postpone_alarm(void) {
 
     ClockSetAlarm(clock, &alarm);
     SimulateSeconds(clock, 60);
-    TEST_ASSERT_TRUE(ClockIsAlarmActive(clock)); // Verifica que la alarma esté activa
-    ClockAlarmAction(clock, ALARM_SNOOZE); // Pospone la alarma
-    TEST_ASSERT_ALARM(1, 0, 1, 5, 0, 0); // Verifica que la alarma se haya pospuesto correctamente
+    TEST_ASSERT_TRUE(ClockAlarmRinging(clock)); // Verifica que la alarma suene
+    ClockSnoozeAlarm(clock, 5);                 // Pospone la alarma por 5 minutos
+    TEST_ASSERT_ALARM(1, 0, 1, 5, 0, 0);        // Verifica que la alarma se haya pospuesto correctamente
     SimulateSeconds(clock, 300);
-    TEST_ASSERT_TRUE(ClockIsAlarmActive(clock)); // Verifica que la alarma esté activa
+    TEST_ASSERT_TRUE(ClockAlarmRinging(clock)); // Verifica que la alarma suene
+}
 
+// Hacer sonar la alarma y cancelarla hasta el otro dia.
+void test_clock_ring_and_cancel_alarm(void) {
+    static const clockTimeT alarm = {.time = {
+                                         .hours = {0, 1}, .minutes = {0, 1}, .seconds = {0, 0} // 10:10:00
+                                     }};
+
+    ClockSetTime(clock, &(clockTimeT){.time = {
+                                          .hours = {0, 1}, .minutes = {9, 0}, .seconds = {0, 0} // 10:09:00
+                                      }});
+
+    ClockSetAlarm(clock, &alarm);
+    SimulateSeconds(clock, 60);
+    TEST_ASSERT_TRUE(ClockAlarmRinging(clock));  // Verifica que la alarma esté activa
+    ClockAlarmAction(clock, ALARM_CANCEL);       // Cancela la alarma
+    TEST_ASSERT_FALSE(ClockAlarmRinging(clock)); // Verifica que la alarma no esté activa
+    SimulateSeconds(clock, 86400);               // Avanza un día completo
+    TEST_ASSERT_TRUE(ClockAlarmRinging(clock));  // Verifica que la alarma está activa después de un día
+}
+
+// Probar que la alarma se pospone correctamente al exceder el tiempo máximo permitido.
+void test_alarm_snooze_overflow(void) {
+    static const clockTimeT alarm = {.time = {.hours = {3, 2}, .minutes = {0, 5}, .seconds = {0, 0}}}; // 23:50:00
+
+    ClockSetTime(clock, &(clockTimeT){.time = {.hours = {3, 2}, .minutes = {9, 4}, .seconds = {0, 0}}}); // 23:49:00
+    ClockSetAlarm(clock, &alarm);
+
+    SimulateSeconds(clock, 60); // Avanza un minuto para activar la alarma
+    TEST_ASSERT_TRUE(ClockAlarmRinging(clock)); // Verifica que la alarma suene
+    ClockSnoozeAlarm(clock,70); // Debería quedar 00:05:00
+    SimulateSeconds(clock, 4200); // Avanza 5 minutos
+    TEST_ASSERT_TRUE(ClockAlarmRinging(clock)); // Verifica que la alarma suene nuevamente
+    TEST_ASSERT_ALARM(0, 1, 0, 0, 0, 0); // Verifica que la alarma se haya pospuesto correctamente
+}
+
+// Probar la protección contra NULL en las funciones de reloj.
+void test_null_protection(void) {
+    TEST_ASSERT_FALSE(ClockSetTime(NULL, NULL));
+    TEST_ASSERT_FALSE(ClockSetAlarm(NULL, NULL));
+    TEST_ASSERT_FALSE(ClockGetAlarm(NULL, NULL));
+    TEST_ASSERT_FALSE(ClockGetTime(NULL, NULL));
 }
 
 /* === End of documentation ======================================================================================== */

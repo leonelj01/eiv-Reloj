@@ -37,8 +37,10 @@ struct clockS {
     clockTimeT currentTime;  //!< Hora actual del reloj
     clockTimeT alarm;        //!< Hora de la alarma
     bool validTime;          //!< Indica si la hora actual es válida
-    bool alarmActive;        //!< Indica si la alarma está activa
     bool validAlarm;         //!< Indica si la hora de la alarma es válida
+    bool alarmActive;        //!< Indica si la alarma está activa
+    bool alarmEnabled;       //!< Indica si la alarma está habilitada
+    clockDriverT driver;     //!< Controlador del reloj
 };
 
 /* === Private function declarations =============================================================================== */
@@ -52,7 +54,11 @@ static void AdvanceTime(clockT self);
 
 static bool IsValidTime(const clockTimeT * time);
 
-static void AlarmPospone(clockT self);
+static void AlarmPospone(clockT self, uint8_t minutes);
+
+static bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens);
+
+static bool IsNewDay(clockTimeT prev);
 
 /* === Private variable definitions ================================================================================ */
 
@@ -61,31 +67,22 @@ static void AlarmPospone(clockT self);
 /* === Private function definitions ================================================================================ */
 
 static void AdvanceTime(clockT self) {
-    self->currentTime.time.seconds[0]++;
-    if (self->currentTime.time.seconds[0] > 9) {
-        self->currentTime.time.seconds[0] = 0;
-        self->currentTime.time.seconds[1]++;
+    // Guardar hora previa para detectar el paso de un día
+    clockTimeT previousTime = self->currentTime;
+
+    if (BcdIncrement(&self->currentTime.time.seconds[0], &self->currentTime.time.seconds[1], 9, 5)) {
+        if (BcdIncrement(&self->currentTime.time.minutes[0], &self->currentTime.time.minutes[1], 9, 5)) {
+            BcdIncrement(&self->currentTime.time.hours[0], &self->currentTime.time.hours[1], 3, 2);
+        }
     }
-    if (self->currentTime.time.seconds[1] > 5) {
-        self->currentTime.time.seconds[1] = 0;
-        self->currentTime.time.minutes[0]++;
+
+    // Detectar paso de 23:59:59 a 00:00:00
+    if (IsNewDay(previousTime)) {
+        self->alarmActive = true; // Si es un nuevo día, activar la alarma
     }
-    if (self->currentTime.time.minutes[0] > 9) {
-        self->currentTime.time.minutes[0] = 0;
-        self->currentTime.time.minutes[1]++;
-    }
-    if (self->currentTime.time.minutes[1] > 5) {
-        self->currentTime.time.minutes[1] = 0;
-        self->currentTime.time.hours[0]++;
-    }
-    if (self->currentTime.time.hours[0] > 9) {
-        self->currentTime.time.hours[0] = 0;
-        self->currentTime.time.hours[1]++;
-    }
-    if (self->currentTime.time.hours[1] == 2 && self->currentTime.time.hours[0] > 3) {
-        self->currentTime.time.hours[0] = 0;
-        self->currentTime.time.hours[1] = 0;
-    }
+
+    // Verificar si alarma debe sonar y disparar callback
+    ClockAlarmRinging(self);
 }
 
 static bool IsValidTime(const clockTimeT * time) {
@@ -97,25 +94,53 @@ static bool IsValidTime(const clockTimeT * time) {
     return isValid;
 }
 
-static void AlarmPospone(clockT self) {
-    self->alarm.time.minutes[0] += 5;
-    if (self->alarm.time.minutes[0] > 9) {
-        self->alarm.time.minutes[0] -= 10;
-        self->alarm.time.minutes[1]++;
+static void AlarmPospone(clockT self, uint8_t minutes) {
+    // Convertir minutos actuales a decimal
+    uint8_t dec_minutes = self->alarm.time.minutes[1] * 10 + self->alarm.time.minutes[0];
+    uint8_t dec_hours = self->alarm.time.hours[1] * 10 + self->alarm.time.hours[0];
+
+    // Sumar los minutos
+    dec_minutes += minutes;
+
+    // Ajustar horas si hay overflow de minutos
+    dec_hours += dec_minutes / 60;
+    dec_minutes = dec_minutes % 60;
+
+    // Ajustar si pasa de 23:59
+    if (dec_hours >= 24) {
+        dec_hours = dec_hours % 24;
     }
-    if (self->alarm.time.minutes[1] > 5) {
-        self->alarm.time.minutes[1] = 0;
-        self->alarm.time.hours[0]++;
-    }
-    if (self->alarm.time.hours[0] > 9) {
-        self->alarm.time.hours[0] = 0;
-        self->alarm.time.hours[1]++;
-    }
-    if (self->alarm.time.hours[1] == 2 && self->alarm.time.hours[0] > 3) {
-        self->alarm.time.hours[0] = 0;
-        self->alarm.time.hours[1] = 0;
-    }
+
+    // Convertir de vuelta a BCD
+    self->alarm.time.minutes[1] = dec_minutes / 10;
+    self->alarm.time.minutes[0] = dec_minutes % 10;
+
+    self->alarm.time.hours[1] = dec_hours / 10;
+    self->alarm.time.hours[0] = dec_hours % 10;
 }
+
+
+static bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
+    (*units)++;
+    if (*units > max_units) {
+        *units = 0;
+        (*tens)++;
+        if (*tens > max_tens) {
+            *tens = 0;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool IsNewDay(clockTimeT prev) {
+    if (prev.time.hours[1] == 2 && prev.time.hours[0] == 3 && prev.time.minutes[1] == 5 && prev.time.minutes[0] == 9 &&
+        prev.time.seconds[1] == 5 && prev.time.seconds[0] == 9) {
+        return true; // Se ha detectado un nuevo día
+    }
+    return false; // No se ha detectado un nuevo día
+}
+
 /* === Public function implementation ============================================================================== */
 
 clockT ClockCreate(uint16_t ticksPerSeconds) {
@@ -155,48 +180,75 @@ void ClockNewTick(clockT self) {
 }
 
 bool ClockSetAlarm(clockT self, const clockTimeT * alarm) {
+
+    if (!self || !alarm) {
+        return false; // Protección ante NULL
+    }
+
+    if (!IsValidTime(alarm)) {
+        self->validAlarm = false;
+        return false; // Hora de alarma inválida
+    }
+
     memcpy(&self->alarm, alarm, sizeof(clockTimeT));
     self->validAlarm = true;
-    self->alarmActive = true; // Se activa la alarma al establecerla
-    return self->validAlarm;
+    self->alarmEnabled = true;
+    self->alarmActive = true;
+    return true;
 }
 
 bool ClockGetAlarm(clockT self, clockTimeT * alarm) {
-    memcpy(alarm, &self->alarm, sizeof(clockTimeT));
-    return self->validAlarm;
+    if (self && alarm) {
+        memcpy(alarm, &self->alarm, sizeof(clockTimeT));
+        return self->validAlarm; // Retorna si la alarma es válida
+    }
+    return false; // Si el reloj o el puntero de alarma son NULL, retorna false
 }
 
 bool ClockIsAlarmActive(clockT self) {
-    bool isActive = false;
-    if (self->alarmActive && self->validTime) {
-        if (!memcmp(&self->currentTime, &self->alarm, sizeof(clockTimeT))) {
-            isActive = true; // La alarma está activa
-            // se debera cambiar por un callback para que ejecute una accion
-        }
+    if (self) {
+        return self->alarmActive; // Retorna el estado de la alarma
     }
-    return isActive;
+    return false; // Si el reloj es NULL, retorna false
 }
 
-// Luego quisiera hacer un case para utilizar distintas funciones de la alarma, por ejemplo:
-// - Posponer la alarma
-// - Cancelar la alarma
-// - Desactivar la alarma
-// Ademas deberia cambiar el nombre por ClockAlarmAction o algo similar
+bool ClockIsAlarmEnabled(clockT clock) {
+    if (clock) {
+        return clock->alarmEnabled; // Retorna el estado de la alarma
+    }
+    return false; // Si el reloj es NULL, retorna false
+}
+
 void ClockAlarmAction(clockT self, AlarmActions action) {
     if (self) {
         switch (action) {
-        case ALARM_SNOOZE:
-            // Posponer la alarma por 5 minutos
-            AlarmPospone(self);
-            break;
         case ALARM_CANCEL:
             self->alarmActive = false; // Cancela la alarma
-            // Deberia tener en cuenta luego que la alarma se debe volver a activar para el dia siguiente.
             break;
         case ALARM_DISABLE:
-            self->alarmActive = false; // Desactiva la alarma
+            self->alarmEnabled = false; // Desactiva la alarma
+            break;
+
+        case ALARM_ENABLE:
+            self->alarmEnabled = true; // Habilita la alarma
             break;
         }
     }
 }
+
+void ClockSnoozeAlarm(clockT self, uint8_t minutes) {
+    if (self && self->alarmActive && self->alarmEnabled) {
+        AlarmPospone(self, minutes); // Pospone la alarma por los minutos especificados
+    }
+}
+
+bool ClockAlarmRinging(clockT self) {
+    if (self && self->alarmEnabled && self->alarmActive) { // Luego se debera verificar si el driver es NULL
+        if (!memcmp(&self->currentTime, &self->alarm, sizeof(clockTimeT))) {
+            return true; // La alarma está sonando
+        }
+    }
+    return false; // Si el reloj es NULL, no esta activo o habilitado, retorna false
+}
+
 /* === End of documentation ======================================================================================== */
