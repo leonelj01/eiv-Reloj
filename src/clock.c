@@ -52,12 +52,42 @@ struct clockS {
  */
 static void AdvanceTime(clockT self);
 
+/**
+ * @brief  Verifica si la hora proporcionada es válida.
+ *
+ * @param time  Puntero a la estructura de hora a verificar.
+ * @return true Si la hora es válida.
+ * @return false Si la hora no es válida.
+ */
 static bool IsValidTime(const clockTimeT * time);
 
+/**
+ * @brief  Pospone la alarma por una cantidad de minutos especificada.
+ *
+ * @param self  Referencia al objeto reloj.
+ * @param minutes  Cantidad de minutos para posponer la alarma.
+ */
 static void AlarmPospone(clockT self, uint8_t minutes);
 
+/**
+ * @brief  Incrementa un valor en formato BCD (Binary-Coded Decimal).
+ *
+ * @param units  Puntero al dígito de unidades.
+ * @param tens  Puntero al dígito de decenas.
+ * @param max_units  Valor máximo para el dígito de unidades.
+ * @param max_tens  Valor máximo para el dígito de decenas.
+ * @return true Si se ha producido un desbordamiento y se ha incrementado el dígito de decenas.
+ * @return false Si no hay desbordamiento.
+ */
 static bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens);
 
+/**
+ * @brief  Verifica si ha pasado un nuevo día comparando la hora previa con la actual.
+ *
+ * @param prev  Hora previa del reloj.
+ * @return true Si ha pasado un nuevo día.
+ * @return false Si no ha pasado un nuevo día.
+ */
 static bool IsNewDay(clockTimeT prev);
 
 /* === Private variable definitions ================================================================================ */
@@ -119,7 +149,6 @@ static void AlarmPospone(clockT self, uint8_t minutes) {
     self->alarm.time.hours[0] = dec_hours % 10;
 }
 
-
 static bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
     (*units)++;
     if (*units > max_units) {
@@ -155,13 +184,16 @@ clockT ClockCreate(uint16_t ticksPerSeconds) {
 bool ClockGetTime(clockT self, clockTimeT * result) {
     if (result != NULL) {
         memcpy(result, &self->currentTime, sizeof(clockTimeT));
-    } else {
-        return false; // No se puede obtener la hora si el puntero es NULL
+        return self->validTime;
     }
-    return self->validTime;
+    return false; // Protección ante NULL
 }
 
 bool ClockSetTime(clockT self, const clockTimeT * newTime) {
+    if (!self || !newTime) {
+        return false; // Protección ante NULL
+    }
+
     if (IsValidTime(newTime)) {
         memcpy(&self->currentTime, newTime, sizeof(clockTimeT));
         self->validTime = true; // Hora válida
@@ -172,10 +204,12 @@ bool ClockSetTime(clockT self, const clockTimeT * newTime) {
 }
 
 void ClockNewTick(clockT self) {
-    self->ticks++;
-    if (self->ticks == self->ticksPerSecond) {
-        self->ticks = 0;
-        AdvanceTime(self);
+    if (self) {
+        self->ticks++;
+        if (self->ticks == self->ticksPerSecond) {
+            self->ticks = 0;
+            AdvanceTime(self);
+        }
     }
 }
 
@@ -187,6 +221,8 @@ bool ClockSetAlarm(clockT self, const clockTimeT * alarm) {
 
     if (!IsValidTime(alarm)) {
         self->validAlarm = false;
+        self->alarmEnabled = false; // Deshabilita la alarma si la hora es inválida
+        self->alarmActive = false; // Desactiva la alarma si la hora es inválida
         return false; // Hora de alarma inválida
     }
 
@@ -206,17 +242,11 @@ bool ClockGetAlarm(clockT self, clockTimeT * alarm) {
 }
 
 bool ClockIsAlarmActive(clockT self) {
-    if (self) {
-        return self->alarmActive; // Retorna el estado de la alarma
-    }
-    return false; // Si el reloj es NULL, retorna false
+    return self ? self->alarmActive : false; // Retorna si la alarma está activa
 }
 
-bool ClockIsAlarmEnabled(clockT clock) {
-    if (clock) {
-        return clock->alarmEnabled; // Retorna el estado de la alarma
-    }
-    return false; // Si el reloj es NULL, retorna false
+bool ClockIsAlarmEnabled(clockT self) {
+    return self ? self->alarmEnabled : false; // Retorna si la alarma está habilitada
 }
 
 void ClockAlarmAction(clockT self, AlarmActions action) {

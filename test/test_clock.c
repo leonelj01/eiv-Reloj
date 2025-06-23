@@ -28,24 +28,10 @@ SPDX-License-Identifier: MIT
 #include "clock.h"
 #include <stdint.h>
 
-/* === Testing functions =========================================================================================== */
-
-/**
- * - Al inicializar el reloj está en 00:00 y con hora invalida.
- * - Después de n ciclos de reloj la hora avanza un segundo, diez
- *   segundos, un minutos, diez minutos, una hora, diez horas y un día completo.
- * - Tratar de ajustar la hora el reloj con valores invalidos y verificar que los rechaza.
- * - Fijar la hora de la alarma y consultarla.
- * - Fijar la alarma y avanzar el reloj para que suene.
- * - Fijar la alarma, deshabilitarla y avanzar el reloj para no suene.
- * - Hacer sonar la alarma y posponerla.
- * - Hacer sonar la alarma y cancelarla hasta el otro dia.
- * - Probar getTime con NULL como argumento.
- * - Hacer una prueba con frecuencias diferentes.
- *
- */
+/* === Macros definitions ========================================================================================== */
 
 #define CLOCK_TICK_PER_SECONDS 5
+
 #define TEST_ASSERT_TIME(hourTens, hourUnits, minutesTens, minutesUnits, secondsTens, secondsUnits)                    \
     clockTimeT currentTime = {0};                                                                                      \
     TEST_ASSERT_TRUE_MESSAGE(ClockGetTime(clock, &currentTime), "Clock has invalid time");                             \
@@ -66,6 +52,26 @@ SPDX-License-Identifier: MIT
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(hourUnits, alarmTime.bcd[4], "Diference in unit hours");                           \
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(hourTens, alarmTime.bcd[5], "Diference in tens hours");
 
+/* === Private data type declarations ============================================================================== */
+
+/* === Private function declarations =============================================================================== */
+
+/**
+ * @brief Simula el avance del reloj en segundos.
+ *
+ * @param clock  Referencia al objeto reloj que se va a simular.
+ * @param seconds  Cantidad de segundos a simular.
+ */
+static void SimulateSeconds(clockT clock, uint32_t seconds);
+
+/* === Private variable definitions ================================================================================ */
+
+/* === Public variable definitions ================================================================================= */
+
+clockT clock;
+
+/* === Private function definitions ================================================================================ */
+
 static void SimulateSeconds(clockT clock, uint32_t seconds) {
     uint32_t ticks = CLOCK_TICK_PER_SECONDS * seconds;
     for (uint32_t i = 0; i < ticks; i++) {
@@ -73,7 +79,22 @@ static void SimulateSeconds(clockT clock, uint32_t seconds) {
     }
 }
 
-clockT clock;
+/* === Testing functions =========================================================================================== */
+
+/**
+ * - Al inicializar el reloj está en 00:00 y con hora invalida.
+ * - Después de n ciclos de reloj la hora avanza un segundo, diez
+ *   segundos, un minutos, diez minutos, una hora, diez horas y un día completo.
+ * - Tratar de ajustar la hora el reloj con valores invalidos y verificar que los rechaza.
+ * - Fijar la hora de la alarma y consultarla.
+ * - Fijar la alarma y avanzar el reloj para que suene.
+ * - Fijar la alarma, deshabilitarla y avanzar el reloj para no suene.
+ * - Hacer sonar la alarma y posponerla.
+ * - Hacer sonar la alarma y cancelarla hasta el otro dia.
+ * - Probar getTime con NULL como argumento.
+ * - Hacer una prueba con frecuencias diferentes.
+ *
+ */
 
 void setUp(void) {
     clock = ClockCreate(CLOCK_TICK_PER_SECONDS);
@@ -277,6 +298,9 @@ void test_null_protection(void) {
     TEST_ASSERT_FALSE(ClockSetAlarm(NULL, NULL));
     TEST_ASSERT_FALSE(ClockGetAlarm(NULL, NULL));
     TEST_ASSERT_FALSE(ClockGetTime(NULL, NULL));
+    TEST_ASSERT_FALSE(ClockIsAlarmActive(NULL));
+    TEST_ASSERT_FALSE(ClockIsAlarmEnabled(NULL));
+
 }
 
 /* === End of documentation ======================================================================================== */

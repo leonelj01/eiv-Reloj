@@ -39,10 +39,11 @@ extern "C" {
 
 /* === Public data type declarations =============================================================================== */
 
+/// @brief  Acciones que se pueden realizar sobre la alarma del reloj.
 typedef enum AlarmActions {
-    ALARM_CANCEL, //!< Cancelar la alarma
+    ALARM_CANCEL,  //!< Cancelar la alarma
     ALARM_DISABLE, //!< Desactivar la alarma
-    ALARM_ENABLE  //!< Habilitar la alarma
+    ALARM_ENABLE   //!< Habilitar la alarma
 } AlarmActions;
 
 typedef union {
@@ -62,33 +63,114 @@ typedef void (*clockAlarmRingingT)(clockT clock);
 typedef struct clockDriverS {
     clockAlarmRingingT AlarmRinging; //!< Callback para la alarma
 } const * clockDriverT;
-// Esta estructura sera para luego 
+// Esta estructura sera para luego
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
+/**
+ * @brief Crea un reloj con la cantidad de ticks por segundo especificada.
+ *
+ * @param ticksPerSecond  Cantidad de ticks por segundo que tendrá el reloj.
+ * @return clockT  Retorna un puntero al reloj creado.
+ */
 clockT ClockCreate(uint16_t ticksPerSecond);
 
+/**
+ * @brief Obtiene la hora actual del reloj.
+ *
+ * @param clock  Referencia al objeto reloj del cual se desea obtener la hora.
+ * @param currentTime  Puntero a una estructura donde se almacenará la hora actual.
+ * @return true
+ * @return false
+ * @note Si el puntero `currentTime` es NULL, la función retornará false. Ademas determina si la hora es válida.
+ */
 bool ClockGetTime(clockT clock, clockTimeT * currentTime);
 
+/**
+ * @brief Establece la hora del reloj.
+ *
+ * @param clock  Referencia al objeto reloj donde se desea establecer la hora.
+ * @param NewTime  Puntero a una estructura que contiene la nueva hora a establecer.
+ * @return true
+ * @return false
+ * @note Si el puntero `NewTime` es NULL o la hora no es válida, la función retornará false.
+ */
 bool ClockSetTime(clockT clock, const clockTimeT * NewTime);
 
+/**
+ * @brief Registra un nuevo tick en el reloj.
+ *
+ * @param clock  Referencia al objeto reloj que recibe el nuevo tick.
+ */
 void ClockNewTick(clockT clock);
 
+/**
+ * @brief Establece una alarma en el reloj.
+ *
+ * @param clock  Referencia al objeto reloj donde se desea establecer la alarma.
+ * @param alarm  Puntero a una estructura que contiene la hora de la alarma.
+ * @return true
+ * @return false
+ * @note Si el puntero `alarm` es NULL o la hora de la alarma no es válida, la función retornará false.
+ */
 bool ClockSetAlarm(clockT clock, const clockTimeT * alarm);
 
+/**
+ * @brief Obtiene la hora de la alarma del reloj.
+ *
+ * @param clock  Referencia al objeto reloj del cual se desea obtener la hora de la alarma.
+ * @param alarm  Puntero a una estructura donde se almacenará la hora de la alarma.
+ * @return true
+ * @return false
+ * @note Si el puntero `alarm` es NULL, la función retornará false.
+ */
 bool ClockGetAlarm(clockT clock, clockTimeT * alarm);
 
+/**
+ * @brief  Verifica si la alarma está activa en el reloj.
+ *
+ * @param clock  Referencia al objeto reloj que se desea verificar.
+ * @return true
+ * @return false
+ */
 bool ClockIsAlarmActive(clockT clock);
 
+/**
+ * @brief Realiza una acción sobre la alarma del reloj.
+ *
+ * @param clock  Referencia al objeto reloj sobre el cual se desea realizar la acción.
+ * @param action  Acción a realizar sobre la alarma (cancelar, desactivar o habilitar).
+ */
 void ClockAlarmAction(clockT clock, AlarmActions action);
 
+/**
+ * @brief  Verifica si la alarma está habilitada en el reloj.
+ *
+ * @param clock  Referencia al objeto reloj que se desea verificar.
+ * @return true
+ * @return false
+ */
 bool ClockIsAlarmEnabled(clockT clock);
 
+/**
+ * @brief Pospone la alarma del reloj por una cantidad de minutos especificada.
+ *
+ * @param clock  Referencia al objeto reloj sobre el cual se desea posponer la alarma.
+ * @param minutes  Cantidad de minutos por los cuales se desea posponer la alarma.
+ */
 void ClockSnoozeAlarm(clockT clock, uint8_t minutes);
 
+/**
+ * @brief  Verifica si la alarma del reloj está sonando.
+ *
+ * @param clock  Referencia al objeto reloj que se desea verificar.
+ * @return true
+ * @return false
+ */
 bool ClockAlarmRinging(clockT clock);
+
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus
