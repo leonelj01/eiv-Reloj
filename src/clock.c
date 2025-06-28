@@ -32,15 +32,15 @@ SPDX-License-Identifier: MIT
 /* === Private data type declarations ============================================================================== */
 
 struct clockS {
-    uint16_t ticks;          //!< Contador de ticks del reloj
-    uint16_t ticksPerSecond; //!< Cantidad de ticks por segundo
-    clockTimeT currentTime;  //!< Hora actual del reloj
-    clockTimeT alarm;        //!< Hora de la alarma
-    bool validTime;          //!< Indica si la hora actual es válida
-    bool validAlarm;         //!< Indica si la hora de la alarma es válida
-    bool alarmActive;        //!< Indica si la alarma está activa
-    bool alarmEnabled;       //!< Indica si la alarma está habilitada
-    clockDriverT driver;     //!< Controlador del reloj
+    uint16_t ticks;                  //!< Contador de ticks del reloj
+    uint16_t ticksPerSecond;         //!< Cantidad de ticks por segundo
+    clockTimeT currentTime;          //!< Hora actual del reloj
+    clockTimeT alarm;                //!< Hora de la alarma
+    bool validTime;                  //!< Indica si la hora actual es válida
+    bool validAlarm;                 //!< Indica si la hora de la alarma es válida
+    bool alarmActive;                //!< Indica si la alarma está activa
+    bool alarmEnabled;               //!< Indica si la alarma está habilitada
+    clockAlarmRingingT alarmRinging; //!< Controlador del reloj
 };
 
 /* === Private function declarations =============================================================================== */
@@ -172,12 +172,13 @@ static bool IsNewDay(clockTimeT prev) {
 
 /* === Public function implementation ============================================================================== */
 
-clockT ClockCreate(uint16_t ticksPerSeconds) {
+clockT ClockCreate(uint16_t ticksPerSecond, clockAlarmRingingT function) {
     static struct clockS self[1];
     memset(self, 0, sizeof(struct clockS));
     self->validTime = false;
     self->validAlarm = false;
-    self->ticksPerSecond = ticksPerSeconds;
+    self->ticksPerSecond = ticksPerSecond;
+    self->alarmRinging = function;
     return self;
 }
 
@@ -222,8 +223,8 @@ bool ClockSetAlarm(clockT self, const clockTimeT * alarm) {
     if (!IsValidTime(alarm)) {
         self->validAlarm = false;
         self->alarmEnabled = false; // Deshabilita la alarma si la hora es inválida
-        self->alarmActive = false; // Desactiva la alarma si la hora es inválida
-        return false; // Hora de alarma inválida
+        self->alarmActive = false;  // Desactiva la alarma si la hora es inválida
+        return false;               // Hora de alarma inválida
     }
 
     memcpy(&self->alarm, alarm, sizeof(clockTimeT));
@@ -273,7 +274,7 @@ void ClockSnoozeAlarm(clockT self, uint8_t minutes) {
 }
 
 bool ClockAlarmRinging(clockT self) {
-    if (self && self->alarmEnabled && self->alarmActive) { // Luego se debera verificar si el driver es NULL
+    if (self && self->alarmEnabled && self->alarmActive) {
         if (!memcmp(&self->currentTime, &self->alarm, sizeof(clockTimeT))) {
             return true; // La alarma está sonando
         }

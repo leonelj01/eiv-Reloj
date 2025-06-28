@@ -48,9 +48,9 @@ typedef enum AlarmActions {
 
 typedef union {
     struct {
-        uint8_t seconds[2];
-        uint8_t minutes[2];
         uint8_t hours[2];
+        uint8_t minutes[2];
+        uint8_t seconds[2];
     } time;
     uint8_t bcd[6];
 } clockTimeT;
@@ -58,12 +58,6 @@ typedef union {
 typedef struct clockS * clockT;
 
 typedef void (*clockAlarmRingingT)(clockT clock);
-
-// Esta estructura definirá las acciones del reloj: control de los display, alarmas, etc.
-typedef struct clockDriverS {
-    clockAlarmRingingT AlarmRinging; //!< Callback para la alarma
-} const * clockDriverT;
-// Esta estructura sera para luego
 
 /* === Public variable declarations ================================================================================ */
 
@@ -75,7 +69,7 @@ typedef struct clockDriverS {
  * @param ticksPerSecond  Cantidad de ticks por segundo que tendrá el reloj.
  * @return clockT  Retorna un puntero al reloj creado.
  */
-clockT ClockCreate(uint16_t ticksPerSecond);
+clockT ClockCreate(uint16_t ticksPerSecond, clockAlarmRingingT function);
 
 /**
  * @brief Obtiene la hora actual del reloj.

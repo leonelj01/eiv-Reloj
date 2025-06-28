@@ -41,6 +41,7 @@
 /* === Headers files inclusions =============================================================== */
 
 #include "bsp.h"
+#include "clock.h"
 #include <stdbool.h>
 
 /* === Macros definitions ====================================================================== */
@@ -53,63 +54,60 @@
 
 /* === Public variable definitions ============================================================= */
 
+static boardT board;
+static clockT clock;
+
 /* === Private variable definitions ============================================================ */
 
 /* === Private function implementation ========================================================= */
+void AlarmRinging(clockT clock) {
+}
 
 /* === Public function implementation ========================================================= */
 
 int main(void) {
+    clockTimeT time[6];
 
-    int divisor = 0;
-    uint8_t value[4] = {1, 4, 0, 5};
-    uint8_t dots[4] = {1, 1, 1, 1};
+    clock = ClockCreate(1000, AlarmRinging);
+    board = BoardCreate();
 
-    boardT board = BoardCreate();
-
-    ScreenWriteBCD(board->screen, value, sizeof(value));
-    ScreenWriteDot(board->screen, dots, sizeof(dots));
-    
-    ScreenFlashDigits(board->screen, 0, 3, 50);
-    ScreenFlashDots(board->screen, 0, 3, 25);
+    SysTickInit(1000);
 
     while (true) {
 
         if(DigitalInputWasActivated(board->increment)){
-            DigitalOutputToggle(board->ledGreen);
         }
 
         if(DigitalInputWasActivated(board->decrement)){
-            DigitalOutputToggle(board->ledRed);
         }
 
         if(DigitalInputWasActivated(board->setTime)){
-            DigitalOutputActivate(board->ledBlue);
-        }else if (DigitalInputWasDeactivated(board->setAlarm)){
-            DigitalOutputDesactivate(board->ledBlue);
+        }
+
+        if(DigitalInputWasActivated(board->setAlarm)){
         }
 
         if(DigitalInputWasActivated(board->cancel)){
-            DigitalOutputToggle(board->ledRed);
         }
 
         if(DigitalInputWasDeactivated(board->accept)){
-            DigitalOutputToggle(board->ledGreen);
         }
-
-        divisor++;
-        if (divisor == 5) {
-            divisor = 0;
-        }
-
-        ScreenRefresh(board->screen);
 
         for (int delay = 0; delay < 25000; delay++) {
             __asm("NOP");
         }
+
+        ClockGetTime(clock, time);
+        __asm volatile("cpsid i");
+        ScreenWriteBCD(board->screen, time->bcd, sizeof(time->bcd));
+        __asm volatile("cpsie i");
     }
 }
 
+void SysTick_Handler(void) {
+    ScreenRefresh(board->screen);
+    ClockNewTick(clock);
+}
 /* === End of documentation ==================================================================== */
 
 /** @} End of module definition for doxygen */

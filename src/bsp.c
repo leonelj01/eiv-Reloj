@@ -149,8 +149,6 @@ boardT BoardCreate(void) {
         board->screen = ScreenCreate(4, &screenDriver);
 
         // Inicialización de las salidas del poncho
-        //Chip_SCU_PinMuxSet(BUZZER_PORT, BUZZER_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | BUZZER_FUNC);
-        //board->buzzer = DigitalOutputCreate(BUZZER_GPIO, BUZZER_BIT, true);
 
         Chip_SCU_PinMuxSet(RGB_RED_PORT, RGB_RED_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | RGB_RED_FUNC);
         board->ledRed = DigitalOutputCreate(RGB_RED_GPIO, RGB_RED_BIT, true);
@@ -182,6 +180,17 @@ boardT BoardCreate(void) {
     }
 
     return board;
+}
+
+void SysTickInit(uint16_t ticks) {
+    __asm volatile("cpsid i"); // Deshabilita las interrupciones
+
+    SystemCoreClockUpdate(); // Actualiza la frecuencia del núcleo del sistema
+    SysTick_Config(SystemCoreClock / ticks); // Configura SysTick para interrupciones cada 1 ms
+
+    NVIC_SetPriority(SysTick_IRQn, (1 << __NVIC_PRIO_BITS) - 1); // Establece la prioridad más baja para SysTick
+    
+    __asm volatile("cpsie i"); // Habilita las interrupciones
 }
 
 /* === End of documentation ======================================================================================== */

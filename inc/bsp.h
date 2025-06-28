@@ -63,6 +63,12 @@ typedef struct boardS {
  */
 boardT BoardCreate(void);
 
+/**
+ * @brief Inicializa el temporizador SysTick.
+ * 
+ */
+void SysTickInit(uint16_t ticks);
+
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus
