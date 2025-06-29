@@ -48,14 +48,26 @@
 
 /* === Private data type declarations ========================================================== */
 
+typedef enum clockStates {
+    UNCONFIGURED,        //!< Hora no válida al iniciar el reloj.
+    SHOW_TIME,           //!< Muestra la hora actual.
+    SET_CURRENT_MINUTES, //!< Establece los minutos actuales.
+    SET_CURRENT_HOURS,   //!< Establece la hora actual.
+    SET_ALARM_MINUTES,   //!< Establece los minutos de la alarma.
+    SET_ALARM_HOURS,     //!< Establece la hora de la alarma.
+} clockStates;
+
 /* === Private variable declarations =========================================================== */
 
 /* === Private function declarations =========================================================== */
+
+void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[4]);
 
 /* === Public variable definitions ============================================================= */
 
 static boardT board;
 static clockT clock;
+static clockStates state = UNCONFIGURED;
 
 /* === Private variable definitions ============================================================ */
 
@@ -63,50 +75,62 @@ static clockT clock;
 void AlarmRinging(clockT clock) {
 }
 
+void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[4]) {
+    if (time && digits) {
+        digits[0] = time->bcd[5]; // Hora de decenas
+        digits[1] = time->bcd[4]; // Hora de unidades
+        digits[2] = time->bcd[3]; // Minuto de decenas
+        digits[3] = time->bcd[2]; // Minuto de unidades
+    }
+}
 /* === Public function implementation ========================================================= */
 
 int main(void) {
-    clockTimeT time[6];
 
-    clock = ClockCreate(1000, AlarmRinging);
+    clock = ClockCreate(50, AlarmRinging);
     board = BoardCreate();
 
     SysTickInit(1000);
+    //ScreenFlashDigits(board->screen, 0, 3, 200);
 
     while (true) {
 
-        if(DigitalInputWasActivated(board->increment)){
-        }
+        switch (state) {
+        case UNCONFIGURED:
+            ScreenWriteBCD(board->screen, (uint8_t[]){0, 0, 0, 0}, 4);
+            break;
+        case SHOW_TIME:
+            break;
 
-        if(DigitalInputWasActivated(board->decrement)){
-        }
-
-        if(DigitalInputWasActivated(board->setTime)){
-        }
-
-        if(DigitalInputWasActivated(board->setAlarm)){
-        }
-
-        if(DigitalInputWasActivated(board->cancel)){
-        }
-
-        if(DigitalInputWasDeactivated(board->accept)){
+        default:
+            break;
         }
 
         for (int delay = 0; delay < 25000; delay++) {
             __asm("NOP");
         }
-
-        ClockGetTime(clock, time);
-        __asm volatile("cpsid i");
-        ScreenWriteBCD(board->screen, time->bcd, sizeof(time->bcd));
-        __asm volatile("cpsie i");
     }
 }
 
 void SysTick_Handler(void) {
+    static bool lastValue = false;
+    bool currentValue;
+    uint8_t digits[4];
+    clockTimeT hour;
+
     ScreenRefresh(board->screen);
-    ClockNewTick(clock);
+    currentValue =  ClockNewTick(clock);
+
+    if (currentValue != lastValue){
+        lastValue = currentValue;
+        if (state == SHOW_TIME){
+            ScreenToggleDots(board->screen, 2);
+            ClockGetTime(clock, &hour);
+            GetHourMinuteBCD(&hour,digits);
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
+
+        }
+    }
 }
 /* === End of documentation ==================================================================== */
 

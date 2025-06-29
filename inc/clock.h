@@ -48,9 +48,9 @@ typedef enum AlarmActions {
 
 typedef union {
     struct {
-        uint8_t hours[2];
-        uint8_t minutes[2];
         uint8_t seconds[2];
+        uint8_t minutes[2];
+        uint8_t hours[2];
     } time;
     uint8_t bcd[6];
 } clockTimeT;
@@ -98,7 +98,7 @@ bool ClockSetTime(clockT clock, const clockTimeT * NewTime);
  *
  * @param clock  Referencia al objeto reloj que recibe el nuevo tick.
  */
-void ClockNewTick(clockT clock);
+bool ClockNewTick(clockT clock);
 
 /**
  * @brief Establece una alarma en el reloj.
