@@ -61,13 +61,12 @@ typedef enum clockStates {
 
 /* === Private function declarations =========================================================== */
 
-void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[4]);
-
 /* === Public variable definitions ============================================================= */
 
-static boardT board;
-static clockT clock;
-static clockStates state = UNCONFIGURED;
+boardT board;
+clockT clock;
+clockStates mode;
+uint8_t digits[4];
 
 /* === Private variable definitions ============================================================ */
 
@@ -83,27 +82,115 @@ void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[4]) {
         digits[3] = time->bcd[2]; // Minuto de unidades
     }
 }
+
+void ChangeMode(clockStates value) {
+    mode = value;
+    switch (mode) {
+    case UNCONFIGURED:
+        ScreenFlashDigits(board->screen, 0, 3, 100);
+        break;
+    case SHOW_TIME:
+        ScreenFlashDigits(board->screen, 0, 0, 0);
+        break;
+    case SET_CURRENT_MINUTES:
+        ScreenFlashDigits(board->screen, 2, 3, 100);
+        break;
+    case SET_CURRENT_HOURS:
+        ScreenFlashDigits(board->screen, 0, 1, 100);
+        break;
+    case SET_ALARM_MINUTES:
+        ScreenFlashDigits(board->screen, 2, 3, 100);
+        ScreenWriteDot(board->screen, (uint8_t[]){1, 1, 1, 1}, 4);
+        break;
+    case SET_ALARM_HOURS:
+        ScreenFlashDigits(board->screen, 2, 3, 100);
+        ScreenWriteDot(board->screen, (uint8_t[]){1, 1, 1, 1}, 4);
+        break;
+    default:
+        break;
+    }
+}
+
+void BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
+    (*units)++;
+    if (*units > max_units) {
+        *units = 0;
+        (*tens)++;
+        if (*tens > max_tens) {
+            *tens = 0;
+        }
+    }
+}
+
+void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
+    if (*units == 0) {
+        *units = max_units;
+        if (*tens == 0) {
+            *tens = max_tens;
+        } else {
+            (*tens)--;
+        }
+    } else {
+        (*units)--;
+    }
+}
+
 /* === Public function implementation ========================================================= */
 
 int main(void) {
+    clockTimeT input;
 
     clock = ClockCreate(50, AlarmRinging);
     board = BoardCreate();
 
     SysTickInit(1000);
-    //ScreenFlashDigits(board->screen, 0, 3, 200);
+    ChangeMode(UNCONFIGURED);
 
     while (true) {
 
-        switch (state) {
-        case UNCONFIGURED:
-            ScreenWriteBCD(board->screen, (uint8_t[]){0, 0, 0, 0}, 4);
-            break;
-        case SHOW_TIME:
-            break;
+        if (DigitalInputWasActivated(board->accept)) {
+            if (mode == SET_CURRENT_MINUTES) {
+                ChangeMode(SET_CURRENT_HOURS);
+            } else if (mode == SET_CURRENT_HOURS) {
+                ClockSetTime(clock, &input);
+                ChangeMode(SHOW_TIME);
+            }
+        }
 
-        default:
-            break;
+        if (DigitalInputWasActivated(board->cancel)) {
+            if (ClockGetTime(clock, &input)) {
+                ChangeMode(SHOW_TIME);
+            } else {
+                ChangeMode(UNCONFIGURED);
+            }
+        }
+
+        if (DigitalInputWasActivated(board->setTime)) {
+            ChangeMode(SET_CURRENT_MINUTES);
+            ClockGetTime(clock, &input);
+            GetHourMinuteBCD(&input, digits);
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        }
+
+        if (DigitalInputWasActivated(board->setAlarm)) {
+        }
+
+        if (DigitalInputWasActivated(board->decrement)) {
+            if (mode == SET_CURRENT_MINUTES) {
+                BcdDecrement(&digits[3], &digits[2], 9, 5);
+            } else if (mode == SET_CURRENT_HOURS) {
+                BcdDecrement(&digits[1], &digits[0], 3, 2);
+            }
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        }
+
+        if (DigitalInputWasActivated(board->increment)) {
+            if (mode == SET_CURRENT_MINUTES) {
+                BcdIncrement(&digits[3], &digits[2], 9, 5);
+            } else if (mode == SET_CURRENT_HOURS) {
+                BcdIncrement(&digits[1], &digits[0], 3, 2);
+            }
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
 
         for (int delay = 0; delay < 25000; delay++) {
@@ -113,25 +200,24 @@ int main(void) {
 }
 
 void SysTick_Handler(void) {
-    static bool lastValue = false;
-    bool currentValue;
-    uint8_t digits[4];
+    static bool dotsOn = false;
+    uint8_t aux[4];
     clockTimeT hour;
 
     ScreenRefresh(board->screen);
-    currentValue =  ClockNewTick(clock);
 
-    if (currentValue != lastValue){
-        lastValue = currentValue;
-        if (state == SHOW_TIME){
-            ScreenToggleDots(board->screen, 2);
+    if (ClockNewTick(clock)) {
+        dotsOn = !dotsOn;
+
+        if (mode == SHOW_TIME) {
+            ScreenWriteDot(board->screen, (uint8_t[]){0, dotsOn, 0, 0}, 4);
             ClockGetTime(clock, &hour);
-            GetHourMinuteBCD(&hour,digits);
-            ScreenWriteBCD(board->screen, digits, sizeof(digits));
-
+            GetHourMinuteBCD(&hour, aux);
+            ScreenWriteBCD(board->screen, aux, 4);
         }
     }
 }
+
 /* === End of documentation ==================================================================== */
 
 /** @} End of module definition for doxygen */
