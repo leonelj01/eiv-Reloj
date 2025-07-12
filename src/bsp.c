@@ -53,7 +53,7 @@ static void DigitsTurnOff(void);
  *
  * @param value Valor que se mostrará en los segmentos del display.
  */
-static void SegmentsUpdates(uint8_t value, uint8_t dots);
+static void SegmentsUpdates(uint8_t value);
 
 /**
  * @brief Enciende el dígito especificado en el display.
@@ -129,9 +129,9 @@ static void DigitsTurnOff(void) {
     Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_DP_GPIO, SEGMENT_DP_BIT, false);
 }
 
-static void SegmentsUpdates(uint8_t value, uint8_t dots) {
+static void SegmentsUpdates(uint8_t value) {
     Chip_GPIO_SetValue(LPC_GPIO_PORT, SEGMENTS_GPIO, value & SEGMENTS_MASK);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_DP_GPIO, SEGMENT_DP_BIT, (dots & SEGMENT_DP));
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_DP_GPIO, SEGMENT_DP_BIT, (value & SEGMENT_DP));
 }
 
 static void DigitTurnOn(uint8_t digit) {

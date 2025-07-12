@@ -74,12 +74,23 @@ uint8_t digits[4];
 void AlarmRinging(clockT clock) {
 }
 
-void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[4]) {
+void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
     if (time && digits) {
         digits[0] = time->bcd[5]; // Hora de decenas
         digits[1] = time->bcd[4]; // Hora de unidades
         digits[2] = time->bcd[3]; // Minuto de decenas
         digits[3] = time->bcd[2]; // Minuto de unidades
+    }
+}
+
+void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
+    if (time && digits) {
+        time->bcd[5] = digits[0]; // Hora de decenas
+        time->bcd[4] = digits[1]; // Hora de unidades
+        time->bcd[3] = digits[2]; // Minuto de decenas
+        time->bcd[2] = digits[3]; // Minuto de unidades
+        time->bcd[1] = 0;
+        time->bcd[0] = 0;
     }
 }
 
@@ -100,47 +111,72 @@ void ChangeMode(clockStates value) {
         break;
     case SET_ALARM_MINUTES:
         ScreenFlashDigits(board->screen, 2, 3, 100);
-        ScreenWriteDot(board->screen, (uint8_t[]){1, 1, 1, 1}, 4);
+        ScreenToggleDot(board->screen, 0);
+        ScreenToggleDot(board->screen, 1);
+        ScreenToggleDot(board->screen, 2);
+        ScreenToggleDot(board->screen, 3);
         break;
     case SET_ALARM_HOURS:
         ScreenFlashDigits(board->screen, 2, 3, 100);
-        ScreenWriteDot(board->screen, (uint8_t[]){1, 1, 1, 1}, 4);
+        ScreenToggleDot(board->screen, 0);
+        ScreenToggleDot(board->screen, 1);
+        ScreenToggleDot(board->screen, 2);
+        ScreenToggleDot(board->screen, 3);
         break;
     default:
         break;
     }
 }
 
+// Función auxiliar para obtener el máximo valor de unidades según las decenas
+uint8_t GetMaxUnits(uint8_t tens, uint8_t max_tens, uint8_t max_units) {
+    if (tens == max_tens) {
+        // Caso especial: para horas, si tens=2, max_units=3
+        // Para minutos, si tens=5, max_units=9
+        return (max_tens == 2) ? 3 : 9; // Asume horas si max_tens=2
+    }
+    return 9; // Para decenas normales, unidades van de 0-9
+}
+
 void BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
     (*units)++;
-    if (*units > max_units) {
+
+    // Obtener el límite real de unidades para la decena actual
+    uint8_t current_max_units = GetMaxUnits(*tens, max_tens, max_units);
+
+    if (*units > current_max_units) {
         *units = 0;
         (*tens)++;
+
         if (*tens > max_tens) {
             *tens = 0;
+            *units = 0;
         }
     }
 }
 
 void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
-    if (*units == 0) {
-        *units = max_units;
-        if (*tens == 0) {
-            *tens = max_tens;
-        } else {
-            (*tens)--;
-        }
-    } else {
+    if (*units > 0) {
         (*units)--;
+    } else {
+        if (*tens > 0) {
+            (*tens)--;
+            // Establecer unidades al máximo permitido para la nueva decena
+            *units = GetMaxUnits(*tens, max_tens, max_units);
+        } else {
+            // Ir al valor máximo permitido
+            *tens = max_tens;
+            *units = GetMaxUnits(*tens, max_tens, max_units);
+        }
     }
 }
 
 /* === Public function implementation ========================================================= */
 
 int main(void) {
-    clockTimeT input;
+    clockTimeT hour;
 
-    clock = ClockCreate(50, AlarmRinging);
+    clock = ClockCreate(1000, AlarmRinging);
     board = BoardCreate();
 
     SysTickInit(1000);
@@ -152,13 +188,14 @@ int main(void) {
             if (mode == SET_CURRENT_MINUTES) {
                 ChangeMode(SET_CURRENT_HOURS);
             } else if (mode == SET_CURRENT_HOURS) {
-                ClockSetTime(clock, &input);
+                SetHourMinuteBCD(&hour, digits);
+                ClockSetTime(clock, &hour);
                 ChangeMode(SHOW_TIME);
             }
         }
 
         if (DigitalInputWasActivated(board->cancel)) {
-            if (ClockGetTime(clock, &input)) {
+            if (ClockGetTime(clock, &hour)) {
                 ChangeMode(SHOW_TIME);
             } else {
                 ChangeMode(UNCONFIGURED);
@@ -167,12 +204,13 @@ int main(void) {
 
         if (DigitalInputWasActivated(board->setTime)) {
             ChangeMode(SET_CURRENT_MINUTES);
-            ClockGetTime(clock, &input);
-            GetHourMinuteBCD(&input, digits);
+            ClockGetTime(clock, &hour);
+            GetHourMinuteBCD(&hour, digits);
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
 
         if (DigitalInputWasActivated(board->setAlarm)) {
+            ChangeMode(SET_ALARM_MINUTES);
         }
 
         if (DigitalInputWasActivated(board->decrement)) {
@@ -200,20 +238,19 @@ int main(void) {
 }
 
 void SysTick_Handler(void) {
-    static bool dotsOn = false;
-    uint8_t aux[4];
+    static uint16_t count = 0;
     clockTimeT hour;
 
     ScreenRefresh(board->screen);
+    ClockNewTick(clock);
 
-    if (ClockNewTick(clock)) {
-        dotsOn = !dotsOn;
-
-        if (mode == SHOW_TIME) {
-            ScreenWriteDot(board->screen, (uint8_t[]){0, dotsOn, 0, 0}, 4);
-            ClockGetTime(clock, &hour);
-            GetHourMinuteBCD(&hour, aux);
-            ScreenWriteBCD(board->screen, aux, 4);
+    count = (count + 1) % 1000;
+    if (mode <= SHOW_TIME) {
+        ClockGetTime(clock,&hour);
+        GetHourMinuteBCD(&hour,digits);
+        ScreenWriteBCD(board->screen,digits,sizeof(digits));
+        if(count > 500 && mode == SHOW_TIME){
+            ScreenToggleDot(board->screen,1);
         }
     }
 }

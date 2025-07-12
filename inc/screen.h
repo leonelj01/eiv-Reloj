@@ -51,7 +51,7 @@ typedef struct screenS * screenT;
 
 typedef void (*digitsTurnOffT)(void);
 typedef void (*digitTurnOnT)(uint8_t);
-typedef void (*segmentsUpdatesT)(uint8_t,uint8_t);
+typedef void (*segmentsUpdatesT)(uint8_t);
 
 typedef struct screenDriverS {
     digitsTurnOffT DigitsTurnOff;
@@ -83,15 +83,6 @@ screenT ScreenCreate(uint8_t digits, screenDriverT driver);
 void ScreenWriteBCD(screenT self, uint8_t * value, uint8_t size);
 
 /**
- * @brief  Función para escribir los puntos decimales en la pantalla.
- * 
- * @param self  Puntero a la instancia de la pantalla.
- * @param dots  Puntero al arreglo que indica si se debe mostrar el punto decimal en cada dígito.
- * @param size  Tamaño del arreglo de puntos decimales.
- */
-void ScreenWriteDot(screenT self, uint8_t * dots, uint8_t size);
-
-/**
  * @brief Función para refrescar la pantalla, actualizando el dígito actual.
  *
  * @param self  Puntero a la instancia de la pantalla.
@@ -105,24 +96,13 @@ void ScreenRefresh(screenT self);
  * @param from          Posición del primer dígito desde el cual se comenzará a parpadear.
  * @param to            Posición del último dígito hasta el cual se parpadeará.
  * @param frecuency     Frecuencia de parpadeo en milisegundos.
- * @param selector      Selector para indicar qué tipo de parpadeo se realizará:
- *                     - 0: Parpadeo de los dígitos.
- *                     - 1: Parpadeo del punto decimal.
  * 
  * @return int Retorna 0 si la operación fue exitosa, -1 si hubo un error.
  */
 int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
-/**
- * @brief Funcion para parpadear los puntos del display.
- * 
- * @param self      
- * @param from 
- * @param to 
- * @param divisor 
- * @return int 
- */
-int ScreenFlashDots(screenT self, uint8_t from, uint8_t to, uint16_t divisor);
+void ScreenToggleDot(screenT self, uint8_t position);
+
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus

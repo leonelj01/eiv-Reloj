@@ -205,25 +205,19 @@ bool ClockSetTime(clockT self, const clockTimeT * newTime) {
 }
 
 bool ClockNewTick(clockT self) {
-    bool halfSecond;
-
     if (self) {
         self->ticks++;
-
-        if (self->ticks == (self->ticksPerSecond / 2)) {
-            halfSecond = true; // Marca que pasó medio segundo
-        } else {
-            halfSecond = false;
-        }
 
         if (self->ticks >= self->ticksPerSecond) {
             self->ticks = 0;
             AdvanceTime(self);
+            return true;
         }
     }
 
-    return halfSecond;
+    return false;
 }
+
 
 bool ClockSetAlarm(clockT self, const clockTimeT * alarm) {
 
