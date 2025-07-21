@@ -72,6 +72,7 @@ uint8_t digits[4];
 
 /* === Private function implementation ========================================================= */
 void AlarmRinging(clockT clock) {
+    DigitalOutputActivate(board->ledRed);
 }
 
 void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
@@ -117,7 +118,7 @@ void ChangeMode(clockStates value) {
         ScreenToggleDot(board->screen, 3);
         break;
     case SET_ALARM_HOURS:
-        ScreenFlashDigits(board->screen, 2, 3, 100);
+        ScreenFlashDigits(board->screen, 0, 1, 100);
         ScreenToggleDot(board->screen, 0);
         ScreenToggleDot(board->screen, 1);
         ScreenToggleDot(board->screen, 2);
@@ -175,6 +176,7 @@ void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t ma
 
 int main(void) {
     clockTimeT hour;
+    clockTimeT alarm;
 
     clock = ClockCreate(1000, AlarmRinging);
     board = BoardCreate();
@@ -185,47 +187,68 @@ int main(void) {
     while (true) {
 
         if (DigitalInputWasActivated(board->accept)) {
-            if (mode == SET_CURRENT_MINUTES) {
+            if (mode == SHOW_TIME) {
+                if (ClockIsAlarmRinging(clock)) {
+                    ClockSnoozeAlarm(clock, 5); // Posponer alarma 5 minutos
+                }
+            } else if (mode == SET_CURRENT_MINUTES) {
                 ChangeMode(SET_CURRENT_HOURS);
             } else if (mode == SET_CURRENT_HOURS) {
                 SetHourMinuteBCD(&hour, digits);
                 ClockSetTime(clock, &hour);
                 ChangeMode(SHOW_TIME);
+            } else if (mode == SET_ALARM_MINUTES) {
+                ChangeMode(SET_ALARM_HOURS);
+            } else if (mode == SET_ALARM_HOURS) {
+                SetHourMinuteBCD(&alarm, digits);
+                ClockSetAlarm(clock, &alarm);
+                ChangeMode(SHOW_TIME);
             }
         }
 
         if (DigitalInputWasActivated(board->cancel)) {
-            if (ClockGetTime(clock, &hour)) {
-                ChangeMode(SHOW_TIME);
-            } else {
-                ChangeMode(UNCONFIGURED);
+            if (mode == SHOW_TIME) {
+                if (ClockIsAlarmRinging(clock)) {
+                    ClockAlarmAction(clock, ALARM_CANCEL);
+                }
+            } else if (mode == SET_CURRENT_MINUTES || mode == SET_CURRENT_HOURS) {
+                if (ClockGetTime(clock, &hour)) {
+                    ChangeMode(SHOW_TIME);
+                } else {
+                    ChangeMode(UNCONFIGURED); // Si la hora no es válida, volver a UNCONFIGURED
+                }
+            } else if (mode == SET_ALARM_MINUTES || mode == SET_ALARM_HOURS) {
+                ChangeMode(SHOW_TIME); // Cancelar configuración de alarma
             }
         }
 
-        if (DigitalInputWasActivated(board->setTime)) {
+        if (DigitalInputWasDeactivated(board->setTime)) {
             ChangeMode(SET_CURRENT_MINUTES);
             ClockGetTime(clock, &hour);
             GetHourMinuteBCD(&hour, digits);
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
 
-        if (DigitalInputWasActivated(board->setAlarm)) {
+        if (DigitalInputWasDeactivated(board->setAlarm)) {
             ChangeMode(SET_ALARM_MINUTES);
+            ClockGetAlarm(clock, &alarm);
+            GetHourMinuteBCD(&alarm, digits);
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
 
         if (DigitalInputWasActivated(board->decrement)) {
-            if (mode == SET_CURRENT_MINUTES) {
+            if (mode == SET_CURRENT_MINUTES || mode == SET_ALARM_MINUTES) {
                 BcdDecrement(&digits[3], &digits[2], 9, 5);
-            } else if (mode == SET_CURRENT_HOURS) {
+            } else if (mode == SET_CURRENT_HOURS || mode == SET_ALARM_HOURS) {
                 BcdDecrement(&digits[1], &digits[0], 3, 2);
             }
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
 
         if (DigitalInputWasActivated(board->increment)) {
-            if (mode == SET_CURRENT_MINUTES) {
+            if (mode == SET_CURRENT_MINUTES || mode == SET_ALARM_MINUTES) {
                 BcdIncrement(&digits[3], &digits[2], 9, 5);
-            } else if (mode == SET_CURRENT_HOURS) {
+            } else if (mode == SET_CURRENT_HOURS || mode == SET_ALARM_HOURS) {
                 BcdIncrement(&digits[1], &digits[0], 3, 2);
             }
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
@@ -246,11 +269,17 @@ void SysTick_Handler(void) {
 
     count = (count + 1) % 1000;
     if (mode <= SHOW_TIME) {
-        ClockGetTime(clock,&hour);
-        GetHourMinuteBCD(&hour,digits);
-        ScreenWriteBCD(board->screen,digits,sizeof(digits));
-        if(count > 500 && mode == SHOW_TIME){
-            ScreenToggleDot(board->screen,1);
+        ClockGetTime(clock, &hour);
+        GetHourMinuteBCD(&hour, digits);
+        ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        if (count > 500 && mode == SHOW_TIME) {
+            ScreenToggleDot(board->screen, 1);
+        }
+        if (ClockIsAlarmActive(clock) && ClockIsAlarmEnabled(clock)) {
+            ScreenToggleDot(board->screen, 3);
+        }
+        if (!ClockIsAlarmRinging(clock)) {
+            DigitalOutputDesactivate(board->ledRed);
         }
     }
 }

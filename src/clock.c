@@ -40,6 +40,7 @@ struct clockS {
     bool validAlarm;                 //!< Indica si la hora de la alarma es válida
     bool alarmActive;                //!< Indica si la alarma está activa
     bool alarmEnabled;               //!< Indica si la alarma está habilitada
+    bool alarmRingingNow;            //!< Indica si la alarma está sonando en este momento
     clockAlarmRingingT alarmRinging; //!< Controlador del reloj
 };
 
@@ -177,6 +178,9 @@ clockT ClockCreate(uint16_t ticksPerSecond, clockAlarmRingingT function) {
     memset(self, 0, sizeof(struct clockS));
     self->validTime = false;
     self->validAlarm = false;
+    self->alarmActive = false;
+    self->alarmEnabled = false;
+    self->alarmRingingNow = false;
     self->ticksPerSecond = ticksPerSecond;
     self->alarmRinging = function;
     return self;
@@ -218,7 +222,6 @@ bool ClockNewTick(clockT self) {
     return false;
 }
 
-
 bool ClockSetAlarm(clockT self, const clockTimeT * alarm) {
 
     if (!self || !alarm) {
@@ -259,12 +262,13 @@ void ClockAlarmAction(clockT self, AlarmActions action) {
     if (self) {
         switch (action) {
         case ALARM_CANCEL:
-            self->alarmActive = false; // Cancela la alarma
+            self->alarmActive = false;     // Cancela la alarma
+            self->alarmRingingNow = false; // Apaga sonido actual
             break;
         case ALARM_DISABLE:
-            self->alarmEnabled = false; // Desactiva la alarma
+            self->alarmEnabled = false;    // Desactiva la alarma
+            self->alarmRingingNow = false; // Apaga sonido actual si estaba
             break;
-
         case ALARM_ENABLE:
             self->alarmEnabled = true; // Habilita la alarma
             break;
@@ -274,17 +278,22 @@ void ClockAlarmAction(clockT self, AlarmActions action) {
 
 void ClockSnoozeAlarm(clockT self, uint8_t minutes) {
     if (self && self->alarmActive && self->alarmEnabled) {
-        AlarmPospone(self, minutes); // Pospone la alarma por los minutos especificados
+        self->alarmRingingNow = false; // Evita que suene inmediatamente otra vez
+        AlarmPospone(self, minutes);   // Pospone la alarma
     }
 }
 
-bool ClockAlarmRinging(clockT self) {
+void ClockAlarmRinging(clockT self) {
     if (self && self->alarmEnabled && self->alarmActive) {
-        if (!memcmp(&self->currentTime, &self->alarm, sizeof(clockTimeT))) {
-            return true; // La alarma está sonando
+        if (!self->alarmRingingNow && !memcmp(&self->currentTime, &self->alarm, sizeof(clockTimeT))) {
+            self->alarmRingingNow = true;
+            self->alarmRinging(self);
         }
     }
-    return false; // Si el reloj es NULL, no esta activo o habilitado, retorna false
+}
+
+bool ClockIsAlarmRinging(clockT self){
+    return self ? self->alarmRingingNow : false;
 }
 
 /* === End of documentation ======================================================================================== */

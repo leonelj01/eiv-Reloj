@@ -160,10 +160,20 @@ void ClockSnoozeAlarm(clockT clock, uint8_t minutes);
  * @brief  Verifica si la alarma del reloj está sonando.
  *
  * @param clock  Referencia al objeto reloj que se desea verificar.
- * @return true
- * @return false
  */
-bool ClockAlarmRinging(clockT clock);
+void ClockAlarmRinging(clockT clock);
+
+/**
+ * @brief  Verifica si la alarma del reloj está sonando en este momento.
+ *
+ * @param clock  Referencia al objeto reloj que se desea verificar.
+ * @return true Si la alarma está sonando en este momento.
+ * @return false Si la alarma no está sonando en este momento.
+ *
+ * @note Esta función tiene la finalidad de ser utilizada en el main para evitar usar ClockAlarmRinging
+ *       directamente, ya que esta última también activa la alarma si corresponde.
+ */
+bool ClockIsAlarmRinging(clockT clock);
 
 /* === End of conditional blocks =================================================================================== */
 
