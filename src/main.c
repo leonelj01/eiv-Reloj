@@ -46,6 +46,12 @@
 
 /* === Macros definitions ====================================================================== */
 
+#define TOGGLE_DOT()                                                                                                   \
+    ScreenToggleDot(board->screen, 0);                                                                                 \
+    ScreenToggleDot(board->screen, 1);                                                                                 \
+    ScreenToggleDot(board->screen, 2);                                                                                 \
+    ScreenToggleDot(board->screen, 3);
+
 /* === Private data type declarations ========================================================== */
 
 typedef enum clockStates {
@@ -67,6 +73,7 @@ boardT board;
 clockT clock;
 clockStates mode;
 uint8_t digits[4];
+bool dotsOn = false;
 
 /* === Private variable definitions ============================================================ */
 
@@ -97,33 +104,55 @@ void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
 
 void ChangeMode(clockStates value) {
     mode = value;
+
     switch (mode) {
     case UNCONFIGURED:
         ScreenFlashDigits(board->screen, 0, 3, 100);
         break;
+
     case SHOW_TIME:
         ScreenFlashDigits(board->screen, 0, 0, 0);
+
+        // Apagar los puntos si estaban encendidos
+        if (dotsOn) {
+            ScreenToggleDot(board->screen, 0);
+            ScreenToggleDot(board->screen, 1);
+            ScreenToggleDot(board->screen, 2);
+            ScreenToggleDot(board->screen, 3);
+            dotsOn = false;
+        }
         break;
+
     case SET_CURRENT_MINUTES:
         ScreenFlashDigits(board->screen, 2, 3, 100);
         break;
+
     case SET_CURRENT_HOURS:
         ScreenFlashDigits(board->screen, 0, 1, 100);
         break;
+
     case SET_ALARM_MINUTES:
         ScreenFlashDigits(board->screen, 2, 3, 100);
-        ScreenToggleDot(board->screen, 0);
-        ScreenToggleDot(board->screen, 1);
-        ScreenToggleDot(board->screen, 2);
-        ScreenToggleDot(board->screen, 3);
+        if (!dotsOn) {
+            ScreenToggleDot(board->screen, 0);
+            ScreenToggleDot(board->screen, 1);
+            ScreenToggleDot(board->screen, 2);
+            ScreenToggleDot(board->screen, 3);
+            dotsOn = true;
+        }
         break;
+
     case SET_ALARM_HOURS:
         ScreenFlashDigits(board->screen, 0, 1, 100);
-        ScreenToggleDot(board->screen, 0);
-        ScreenToggleDot(board->screen, 1);
-        ScreenToggleDot(board->screen, 2);
-        ScreenToggleDot(board->screen, 3);
+        if (!dotsOn) {
+            ScreenToggleDot(board->screen, 0);
+            ScreenToggleDot(board->screen, 1);
+            ScreenToggleDot(board->screen, 2);
+            ScreenToggleDot(board->screen, 3);
+            dotsOn = true;
+        }
         break;
+
     default:
         break;
     }
@@ -186,7 +215,7 @@ int main(void) {
 
     while (true) {
 
-        if (DigitalInputWasActivated(board->accept)) {
+        if (DigitalInputWasDeactivated(board->accept)) {
             if (mode == SHOW_TIME) {
                 if (ClockIsAlarmRinging(clock)) {
                     ClockSnoozeAlarm(clock, 5); // Posponer alarma 5 minutos
@@ -206,7 +235,7 @@ int main(void) {
             }
         }
 
-        if (DigitalInputWasActivated(board->cancel)) {
+        if (DigitalInputWasDeactivated(board->cancel)) {
             if (mode == SHOW_TIME) {
                 if (ClockIsAlarmRinging(clock)) {
                     ClockAlarmAction(clock, ALARM_CANCEL);
@@ -230,28 +259,47 @@ int main(void) {
         }
 
         if (DigitalInputWasDeactivated(board->setAlarm)) {
+            dotsOn = false; // Aseguramos que los puntos estén apagados al iniciar la configuración de alarma
             ChangeMode(SET_ALARM_MINUTES);
             ClockGetAlarm(clock, &alarm);
             GetHourMinuteBCD(&alarm, digits);
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
 
-        if (DigitalInputWasActivated(board->decrement)) {
+        if (DigitalInputWasDeactivated(board->decrement)) {
             if (mode == SET_CURRENT_MINUTES || mode == SET_ALARM_MINUTES) {
                 BcdDecrement(&digits[3], &digits[2], 9, 5);
             } else if (mode == SET_CURRENT_HOURS || mode == SET_ALARM_HOURS) {
                 BcdDecrement(&digits[1], &digits[0], 3, 2);
             }
+
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
+
+            if ((mode == SET_ALARM_MINUTES || mode == SET_ALARM_HOURS) && dotsOn) {
+                ScreenToggleDot(board->screen, 0);
+                ScreenToggleDot(board->screen, 1);
+                ScreenToggleDot(board->screen, 2);
+                ScreenToggleDot(board->screen, 3);
+                dotsOn = true;
+            }
         }
 
-        if (DigitalInputWasActivated(board->increment)) {
+        if (DigitalInputWasDeactivated(board->increment)) {
             if (mode == SET_CURRENT_MINUTES || mode == SET_ALARM_MINUTES) {
                 BcdIncrement(&digits[3], &digits[2], 9, 5);
             } else if (mode == SET_CURRENT_HOURS || mode == SET_ALARM_HOURS) {
                 BcdIncrement(&digits[1], &digits[0], 3, 2);
             }
+
             ScreenWriteBCD(board->screen, digits, sizeof(digits));
+
+            if ((mode == SET_ALARM_MINUTES || mode == SET_ALARM_HOURS) && dotsOn) {
+                ScreenToggleDot(board->screen, 0);
+                ScreenToggleDot(board->screen, 1);
+                ScreenToggleDot(board->screen, 2);
+                ScreenToggleDot(board->screen, 3);
+                dotsOn = true; // nos aseguramos que sigue en true
+            }
         }
 
         for (int delay = 0; delay < 25000; delay++) {
