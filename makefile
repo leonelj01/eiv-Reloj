@@ -7,7 +7,7 @@ OBJ_DIR = ${BUILD_DIR}/obj
 BIN_DIR = ${BUILD_DIR}/bin
 DOC_DIR = ${BUILD_DIR}/doc
 
-MODULES = 
+MODULES = module/freertos
 BOARD = edu-ciaa-nxp
 MUJU = ./muju
 
