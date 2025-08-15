@@ -18,23 +18,19 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-#ifndef DISPLAY_H_
-#define DISPLAY_H_
+#ifndef TIME_H_
+#define TIME_H_
 
-/** @file display.h
- ** @brief 
+/** @file time.h
+ ** @brief Plantilla para la creación de archivos de de cabeceras en lenguaje C
  **/
 
 /* === Headers files inclusions ==================================================================================== */
 
 #include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
 #include "event_groups.h"
 #include "queue.h"
 #include "clock.h"
-#include "screen.h"
-#include <stdbool.h>
 
 /* === Header for C++ compatibility ================================================================================ */
 
@@ -44,29 +40,45 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
-#define REFRESH_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
+#define TIME_VALUE_SIZE      sizeof(uint32_t)
+
+#define STATE_VALUE_SIZE     sizeof(char)
+
+#define TIME_TASK_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
+
+#define LAPS_TASK_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
 
 /* === Public data type declarations =============================================================================== */
 
-typedef struct refreshTaskArgS {
-    QueueHandle_t dataTime;
-    QueueHandle_t dataState;
-    SemaphoreHandle_t mutex;
-    screenT display;
-    clockT clk;
-} * refreshTaskArgT;
+typedef struct timeTaskArgS {
+    EventGroupHandle_t events;
+    uint8_t accept;
+    uint8_t cancel;
+    uint8_t increment;
+    uint8_t decrement;
+    uint8_t setTime;
+    uint8_t setAlarm;
+    QueueHandle_t elapsed;
+    QueueHandle_t states;
+    clockT clock;
+} * timeTaskArgT;
+
+typedef enum clockStates {
+    UNCONFIGURED,        //!< Hora no válida al iniciar el reloj.
+    SHOW_TIME,           //!< Muestra la hora actual.
+    SET_CURRENT_MINUTES, //!< Establece los minutos actuales.
+    SET_CURRENT_HOURS,   //!< Establece la hora actual.
+    SET_ALARM_MINUTES,   //!< Establece los minutos de la alarma.
+    SET_ALARM_HOURS,     //!< Establece la hora de la alarma.
+} clockStates;
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
-void RefreshTask(void *args);
+void TimeTask(void *args);
 
-void DisplayTask(void *args);
-
-void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]);
-
-void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]);
+void TimeRefresh(void * pointer);
 
 /* === End of conditional blocks =================================================================================== */
 
@@ -74,4 +86,4 @@ void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]);
 }
 #endif
 
-#endif /* DISPLAY_H_ */
+#endif /* TIME_H_ */

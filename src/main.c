@@ -45,7 +45,10 @@
 #include "bsp.h"
 #include "clock.h"
 #include "keys.h"
+#include "time.h"
+#include "display.h"
 #include <stdbool.h>
+#include <stdlib.h>
 
 /* === Macros definitions ====================================================================== */
 
@@ -56,15 +59,6 @@
     ScreenToggleDot(board->screen, 3);
 
 /* === Private data type declarations ========================================================== */
-
-typedef enum clockStates {
-    UNCONFIGURED,        //!< Hora no válida al iniciar el reloj.
-    SHOW_TIME,           //!< Muestra la hora actual.
-    SET_CURRENT_MINUTES, //!< Establece los minutos actuales.
-    SET_CURRENT_HOURS,   //!< Establece la hora actual.
-    SET_ALARM_MINUTES,   //!< Establece los minutos de la alarma.
-    SET_ALARM_HOURS,     //!< Establece la hora de la alarma.
-} clockStates;
 
 /* === Private variable declarations =========================================================== */
 
@@ -85,26 +79,6 @@ volatile uint32_t mseg = 0; // Variable para el tiempo en milisegundos
 /* === Private function implementation ========================================================= */
 void AlarmRinging(clockT clock) {
     DigitalOutputActivate(board->ledRed);
-}
-
-void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
-    if (time && digits) {
-        digits[0] = time->bcd[5]; // Hora de decenas
-        digits[1] = time->bcd[4]; // Hora de unidades
-        digits[2] = time->bcd[3]; // Minuto de decenas
-        digits[3] = time->bcd[2]; // Minuto de unidades
-    }
-}
-
-void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
-    if (time && digits) {
-        time->bcd[5] = digits[0]; // Hora de decenas
-        time->bcd[4] = digits[1]; // Hora de unidades
-        time->bcd[3] = digits[2]; // Minuto de decenas
-        time->bcd[2] = digits[3]; // Minuto de unidades
-        time->bcd[1] = 0;
-        time->bcd[0] = 0;
-    }
 }
 
 void ChangeMode(clockStates value) {
@@ -200,7 +174,52 @@ void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t ma
 /* === Public function implementation ========================================================= */
 
 int main(void) {
+    QueueHandle_t dataTime;
+    QueueHandle_t dataState;
+    EventGroupHandle_t keyEvents;
+    SemaphoreHandle_t mutex;
 
+    board = BoardCreate();
+    clock = ClockCreate(1000, AlarmRinging);
+
+    dataTime = xQueueCreate(10, sizeof(clockTimeT));
+    dataState = xQueueCreate(10, sizeof(clockStates));
+    keyEvents = xEventGroupCreate();
+    mutex = xSemaphoreCreateMutex();
+
+    refreshTaskArgT refreshArgs = malloc(sizeof(struct refreshTaskArgS));
+    refreshArgs->dataTime = dataTime;
+    refreshArgs->dataState = dataState;
+    refreshArgs->mutex = mutex;
+    refreshArgs->display = board->screen;
+    refreshArgs->clk = clock;
+
+    timeTaskArgT timeArgs = malloc(sizeof(struct timeTaskArgS));
+    timeArgs->events = keyEvents;
+    timeArgs->accept = BTN_ACCEPT;
+    timeArgs->cancel = BTN_CANCEL;
+    timeArgs->setTime = BTN_SET_TIME;
+    timeArgs->setAlarm = BTN_SET_ALARM;
+    timeArgs->increment = BTN_INCREMENT;
+    timeArgs->decrement = BTN_DECREMENT;
+    timeArgs->elapsed = dataTime;
+    timeArgs->states = dataState;
+    timeArgs->clock = clock;
+
+    keyTaskArgT keyArgs = malloc(sizeof(struct keyTaskArgS));
+    keyArgs->events = keyEvents;
+    keyArgs->gpio = board->setTime;
+    keyArgs->shortPulse = BTN_SET_TIME;
+
+    xTaskCreate(RefreshTask, "RefreshTask", configMINIMAL_STACK_SIZE, refreshArgs, tskIDLE_PRIORITY + 3, NULL);
+    xTaskCreate(TimeTask, "TimeTask", configMINIMAL_STACK_SIZE, timeArgs, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(DisplayTask, "DisplayTask", configMINIMAL_STACK_SIZE, refreshArgs, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(TimeRefresh, "TimeRefresh", configMINIMAL_STACK_SIZE, timeArgs, tskIDLE_PRIORITY + 3, NULL);
+    xTaskCreate(KeyTask, "KeyTask", configMINIMAL_STACK_SIZE, keyArgs, tskIDLE_PRIORITY + 2, NULL);
+
+    vTaskStartScheduler();
+
+    while(true);
 }
 
 /* === End of documentation ==================================================================== */

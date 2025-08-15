@@ -25,6 +25,8 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 
 #include "display.h"
+#include "clock.h"
+#include "time.h"
 
 /* === Macros definitions ========================================================================================== */
 
@@ -39,5 +41,53 @@ SPDX-License-Identifier: MIT
 /* === Private function definitions ================================================================================ */
 
 /* === Public function implementation ============================================================================== */
+
+void RefreshTask(void * pointer) {
+    refreshTaskArgT args = pointer;
+    TickType_t last_value = xTaskGetTickCount();
+
+    while (true) {
+        ScreenRefresh(args->display);
+        xTaskDelayUntil(&last_value, pdMS_TO_TICKS(5));
+    }
+}
+
+void DisplayTask(void * pointer){
+    refreshTaskArgT args = pointer;
+    clockTimeT currentTime;
+    uint8_t digits[4];
+    TickType_t lastUpdate = xTaskGetTickCount();
+
+    for (;;) {
+        xQueueReceive(args->dataTime, &currentTime, portMAX_DELAY);
+        GetHourMinuteBCD(&currentTime, digits);
+
+        xSemaphoreTake(args->mutex, portMAX_DELAY);
+        ScreenWriteBCD(args->display, digits, 4);
+        xSemaphoreGive(args->mutex);
+
+        vTaskDelayUntil(&lastUpdate, pdMS_TO_TICKS(1000));
+    }
+}
+
+void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
+    if (time && digits) {
+        digits[0] = time->bcd[5]; // Hora de decenas
+        digits[1] = time->bcd[4]; // Hora de unidades
+        digits[2] = time->bcd[3]; // Minuto de decenas
+        digits[3] = time->bcd[2]; // Minuto de unidades
+    }
+}
+
+void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
+    if (time && digits) {
+        time->bcd[5] = digits[0]; // Hora de decenas
+        time->bcd[4] = digits[1]; // Hora de unidades
+        time->bcd[3] = digits[2]; // Minuto de decenas
+        time->bcd[2] = digits[3]; // Minuto de unidades
+        time->bcd[1] = 0;
+        time->bcd[0] = 0;
+    }
+}
 
 /* === End of documentation ======================================================================================== */

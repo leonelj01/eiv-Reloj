@@ -40,14 +40,12 @@ extern "C" {
 /* === Public macros definitions =================================================================================== */
 
 /* event bits para teclas */
-#define KEY_EVENT_KEY_0     (1 << 0)
-#define KEY_EVENT_KEY_1     (1 << 1)
-#define KEY_EVENT_KEY_2     (1 << 2)
-#define KEY_EVENT_KEY_3     (1 << 3)
-#define KEY_EVENT_KEY_4     (1 << 4)
-#define KEY_EVENT_KEY_5     (1 << 5)
-#define KEY_EVENT_KEY_6     (1 << 6)
-#define KEY_EVENT_KEY_7     (1 << 7)
+#define BTN_SET_TIME  (1 << 0)
+#define BTN_SET_ALARM (1 << 1)
+#define BTN_DECREMENT (1 << 2)
+#define BTN_INCREMENT (1 << 3)
+#define BTN_ACCEPT    (1 << 4)
+#define BTN_CANCEL    (1 << 5)
 
 #define KEY_EVENT_ANY_KEY   0xFF
 
