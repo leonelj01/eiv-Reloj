@@ -19,14 +19,12 @@ SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
 /** @file plantilla.c
- ** @brief Plantilla para la creación de archivos de código fuente en lenguaje C
+ ** @brief Implementacion de funciones auxiliares para el reloj.
  **/
 
 /* === Headers files inclusions ==================================================================================== */
 
-#include "display.h"
-#include "clock.h"
-#include "time.h"
+#include "auxiliar.h"
 
 /* === Macros definitions ========================================================================================== */
 
@@ -41,34 +39,6 @@ SPDX-License-Identifier: MIT
 /* === Private function definitions ================================================================================ */
 
 /* === Public function implementation ============================================================================== */
-
-void RefreshTask(void * pointer) {
-    refreshTaskArgT args = pointer;
-    TickType_t last_value = xTaskGetTickCount();
-
-    while (true) {
-        ScreenRefresh(args->display);
-        xTaskDelayUntil(&last_value, pdMS_TO_TICKS(5));
-    }
-}
-
-void DisplayTask(void * pointer){
-    refreshTaskArgT args = pointer;
-    clockTimeT currentTime;
-    uint8_t digits[4];
-    TickType_t lastUpdate = xTaskGetTickCount();
-
-    for (;;) {
-        xQueueReceive(args->dataTime, &currentTime, portMAX_DELAY);
-        GetHourMinuteBCD(&currentTime, digits);
-
-        xSemaphoreTake(args->mutex, portMAX_DELAY);
-        ScreenWriteBCD(args->display, digits, 4);
-        xSemaphoreGive(args->mutex);
-
-        vTaskDelayUntil(&lastUpdate, pdMS_TO_TICKS(1000));
-    }
-}
 
 void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
     if (time && digits) {
@@ -90,4 +60,47 @@ void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]) {
     }
 }
 
+uint8_t GetMaxUnits(uint8_t tens, uint8_t max_tens, uint8_t max_units) {
+    if (tens == max_tens) {
+        // Caso especial: para horas, si tens=2, max_units=3
+        // Para minutos, si tens=5, max_units=9
+        return (max_tens == 2) ? 3 : 9; // Asume horas si max_tens=2
+    }
+    return 9; // Para decenas normales, unidades van de 0-9
+}
+
+bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
+    (*units)++;
+
+    // Obtener el límite real de unidades para la decena actual
+    uint8_t current_max_units = GetMaxUnits(*tens, max_tens, max_units);
+
+    if (*units > current_max_units) {
+        *units = 0;
+        (*tens)++;
+
+        if (*tens > max_tens) {
+            *tens = 0;
+            *units = 0;
+            return true;
+        }
+    }
+    return false;
+}
+
+void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
+    if (*units > 0) {
+        (*units)--;
+    } else {
+        if (*tens > 0) {
+            (*tens)--;
+            // Establecer unidades al máximo permitido para la nueva decena
+            *units = GetMaxUnits(*tens, max_tens, max_units);
+        } else {
+            // Ir al valor máximo permitido
+            *tens = max_tens;
+            *units = GetMaxUnits(*tens, max_tens, max_units);
+        }
+    }
+}
 /* === End of documentation ======================================================================================== */

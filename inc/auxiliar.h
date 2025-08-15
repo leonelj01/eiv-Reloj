@@ -18,18 +18,15 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-#ifndef TIME_H_
-#define TIME_H_
+#ifndef AUXILIAR_H_
+#define AUXILIAR_H_
 
-/** @file time.h
- ** @brief Plantilla para la creación de archivos de de cabeceras en lenguaje C
+/** @file auxiliar.h
+ ** @brief Declaraciones de funciones auxiliares.
  **/
 
 /* === Headers files inclusions ==================================================================================== */
 
-#include "FreeRTOS.h"
-#include "event_groups.h"
-#include "queue.h"
 #include "clock.h"
 
 /* === Header for C++ compatibility ================================================================================ */
@@ -40,45 +37,63 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
-#define TIME_VALUE_SIZE      sizeof(uint32_t)
-
-#define STATE_VALUE_SIZE     sizeof(char)
-
-#define TIME_TASK_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
-
-#define LAPS_TASK_STACK_SIZE (2 * configMINIMAL_STACK_SIZE)
-
 /* === Public data type declarations =============================================================================== */
-
-typedef struct timeTaskArgS {
-    EventGroupHandle_t events;
-    uint8_t accept;
-    uint8_t cancel;
-    uint8_t increment;
-    uint8_t decrement;
-    uint8_t setTime;
-    uint8_t setAlarm;
-    QueueHandle_t elapsed;
-    QueueHandle_t states;
-    clockT clock;
-} * timeTaskArgT;
-
-typedef enum clockStates {
-    UNCONFIGURED,        //!< Hora no válida al iniciar el reloj.
-    SHOW_TIME,           //!< Muestra la hora actual.
-    SET_CURRENT_MINUTES, //!< Establece los minutos actuales.
-    SET_CURRENT_HOURS,   //!< Establece la hora actual.
-    SET_ALARM_MINUTES,   //!< Establece los minutos de la alarma.
-    SET_ALARM_HOURS,     //!< Establece la hora de la alarma.
-} clockStates;
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
-void TimeTask(void *args);
+/**
+ * @brief Reorganiza los dígitos BCD de la hora y los minutos.
+ *
+ * @param time  Puntero a la estructura de tiempo.
+ * @param digits Array donde se almacenarán los dígitos BCD.
+ *
+ * @note Esta función pasa de la estructura de tiempo a un arreglo de dígitos BCD.
+ */
+void GetHourMinuteBCD(clockTimeT * time, uint8_t digits[]);
 
-void TimeRefresh(void * pointer);
+/**
+ * @brief Reorganiza los dígitos BCD de la hora y los minutos.
+ *
+ * @param time  Puntero a la estructura de tiempo.
+ * @param digits Array donde se almacenarán los dígitos BCD.
+ *
+ * @note Esta función pasa de un arreglo de dígitos BCD a la estructura de tiempo.
+ */
+void SetHourMinuteBCD(clockTimeT * time, uint8_t digits[]);
+
+/**
+ * @brief Obtiene el máximo valor de unidades para una determinada decena.
+ *
+ * @param tens  Valor de la decena.
+ * @param max_tens  Valor máximo de la decena.
+ * @param max_units  Valor máximo de las unidades.
+ * @return uint8_t  Valor máximo de las unidades.
+ */
+uint8_t GetMaxUnits(uint8_t tens, uint8_t max_tens, uint8_t max_units);
+
+/**
+ * @brief Incrementa un valor BCD de unidades y decenas.
+ *
+ * @param units  Puntero al valor de las unidades.
+ * @param tens  Puntero al valor de las decenas.
+ * @param max_units  Valor máximo de las unidades.
+ * @param max_tens  Valor máximo de las decenas.
+ * @return true  Si se produjo un desbordamiento.
+ * @return false  Si no hubo desbordamiento.
+ */
+bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens);
+
+/**
+ * @brief Decrementa un valor BCD de unidades y decenas.
+ *
+ * @param units  Puntero al valor de las unidades.
+ * @param tens  Puntero al valor de las decenas.
+ * @param max_units  Valor máximo de las unidades.
+ * @param max_tens  Valor máximo de las decenas.
+ */
+void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens);
 
 /* === End of conditional blocks =================================================================================== */
 
@@ -86,4 +101,4 @@ void TimeRefresh(void * pointer);
 }
 #endif
 
-#endif /* TIME_H_ */
+#endif /* AUXILIAR_H_ */

@@ -40,12 +40,14 @@ extern "C" {
 /* === Public macros definitions =================================================================================== */
 
 /* event bits para teclas */
-#define BTN_SET_TIME  (1 << 0)
-#define BTN_SET_ALARM (1 << 1)
-#define BTN_DECREMENT (1 << 2)
-#define BTN_INCREMENT (1 << 3)
-#define BTN_ACCEPT    (1 << 4)
-#define BTN_CANCEL    (1 << 5)
+#define BTN_SET_TIME        (1 << 0)
+#define BTN_SET_ALARM       (1 << 1)
+#define BTN_SET_TIME_LONG   (1 << 2)
+#define BTN_SET_ALARM_LONG  (1 << 3)
+#define BTN_DECREMENT       (1 << 4)
+#define BTN_INCREMENT       (1 << 5)
+#define BTN_ACCEPT          (1 << 6)
+#define BTN_CANCEL          (1 << 7)
 
 #define KEY_EVENT_ANY_KEY   0xFF
 
@@ -64,6 +66,11 @@ typedef struct keyTaskArgS {
 
 /* === Public function declarations ================================================================================ */
 
+/**
+ * @brief Tarea para gestionar las teclas.
+ *
+ * @param args Puntero a los argumentos de la tarea.
+ */
 void KeyTask(void * args);
 
 /* === End of conditional blocks =================================================================================== */

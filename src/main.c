@@ -42,23 +42,27 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
+#include "event_groups.h"
+#include "semphr.h"
 #include "bsp.h"
-#include "clock.h"
+#include "auxiliar.h"
 #include "keys.h"
-#include "time.h"
-#include "display.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
 /* === Macros definitions ====================================================================== */
 
-#define TOGGLE_DOT()                                                                                                   \
-    ScreenToggleDot(board->screen, 0);                                                                                 \
-    ScreenToggleDot(board->screen, 1);                                                                                 \
-    ScreenToggleDot(board->screen, 2);                                                                                 \
-    ScreenToggleDot(board->screen, 3);
-
 /* === Private data type declarations ========================================================== */
+
+typedef enum clockStates {
+    UNCONFIGURED,        //!< Hora no válida al iniciar el reloj.
+    SHOW_TIME,           //!< Muestra la hora actual.
+    SET_CURRENT_MINUTES, //!< Establece los minutos actuales.
+    SET_CURRENT_HOURS,   //!< Establece la hora actual.
+    SET_ALARM_MINUTES,   //!< Establece los minutos de la alarma.
+    SET_ALARM_HOURS,     //!< Establece la hora de la alarma.
+} clockStates;
 
 /* === Private variable declarations =========================================================== */
 
@@ -69,8 +73,11 @@
 boardT board;
 clockT clock;
 clockStates mode;
-uint8_t digits[4];
-bool dotsOn = false;
+clockTimeT hour;
+clockTimeT alarm;
+SemaphoreHandle_t hourMutex;
+EventGroupHandle_t keyEventGroup;
+uint8_t digits[4] = {0};
 
 volatile uint32_t mseg = 0; // Variable para el tiempo en milisegundos
 
@@ -91,12 +98,6 @@ void ChangeMode(clockStates value) {
 
     case SHOW_TIME:
         ScreenFlashDigits(board->screen, 0, 0, 0);
-
-        // Apagar los puntos si estaban encendidos
-        if (dotsOn) {
-            TOGGLE_DOT();
-            dotsOn = false;
-        }
         break;
 
     case SET_CURRENT_MINUTES:
@@ -109,18 +110,10 @@ void ChangeMode(clockStates value) {
 
     case SET_ALARM_MINUTES:
         ScreenFlashDigits(board->screen, 2, 3, 100);
-        if (!dotsOn) {
-            TOGGLE_DOT();
-            dotsOn = true;
-        }
         break;
 
     case SET_ALARM_HOURS:
         ScreenFlashDigits(board->screen, 0, 1, 100);
-        if (!dotsOn) {
-            TOGGLE_DOT();
-            dotsOn = true;
-        }
         break;
 
     default:
@@ -128,45 +121,146 @@ void ChangeMode(clockStates value) {
     }
 }
 
-// Función auxiliar para obtener el máximo valor de unidades según las decenas
-uint8_t GetMaxUnits(uint8_t tens, uint8_t max_tens, uint8_t max_units) {
-    if (tens == max_tens) {
-        // Caso especial: para horas, si tens=2, max_units=3
-        // Para minutos, si tens=5, max_units=9
-        return (max_tens == 2) ? 3 : 9; // Asume horas si max_tens=2
+void TimeTask(void * pointer) {
+    TickType_t last = xTaskGetTickCount();
+    while (true) {
+        ClockNewTick(clock); // tick a 1ms
+        xSemaphoreTake(hourMutex, portMAX_DELAY);
+        ClockGetTime(clock, &hour); // cache de hora para pantalla
+        xSemaphoreGive(hourMutex);
+        vTaskDelayUntil(&last, pdMS_TO_TICKS(1)); // 1 ms
     }
-    return 9; // Para decenas normales, unidades van de 0-9
 }
 
-void BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
-    (*units)++;
+// Reemplazá tu RefreshTask por esta versión
+void RefreshTask(void * pointer) {
+    const TickType_t kRefreshMs = 1; // multiplex 1 ms
+    const TickType_t kBlinkMs = 500; // parpadeo 2 Hz
+    TickType_t lastFrame = xTaskGetTickCount();
+    TickType_t lastBlink = xTaskGetTickCount();
+    bool blink = false;
 
-    // Obtener el límite real de unidades para la decena actual
-    uint8_t current_max_units = GetMaxUnits(*tens, max_tens, max_units);
+    clockTimeT localHour = {0};
 
-    if (*units > current_max_units) {
-        *units = 0;
-        (*tens)++;
+    while (true) {
+        // 1) Actualizar cache de hora
+        xSemaphoreTake(hourMutex, portMAX_DELAY);
+        localHour = hour;
+        xSemaphoreGive(hourMutex);
 
-        if (*tens > max_tens) {
-            *tens = 0;
-            *units = 0;
+        // 2) Actualizar dígitos solo cuando mostramos hora o UNCONFIGURED
+        if (mode == SHOW_TIME || mode == UNCONFIGURED) {
+            GetHourMinuteBCD(&localHour, digits);
         }
+        TickType_t now = xTaskGetTickCount();
+        if ((now - lastBlink) >= pdMS_TO_TICKS(kBlinkMs)) {
+            blink = !blink;
+            lastBlink = now;
+        }
+        ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        for (int i = 0; i < 4; i++) {
+            ScreenSetDots(board->screen, i, false);
+        }
+        if (mode == SET_ALARM_MINUTES || mode == SET_ALARM_HOURS) {
+            ScreenSetDots(board->screen, 0, true);
+            ScreenSetDots(board->screen, 1, true);
+            ScreenSetDots(board->screen, 2, true);
+            ScreenSetDots(board->screen, 3, true);
+        }
+        if (mode == SHOW_TIME) {
+            ScreenSetDots(board->screen, 1, blink);
+        }
+        if (ClockIsAlarmActive(clock) && ClockIsAlarmEnabled(clock)) {
+            ScreenSetDots(board->screen, 3, true);
+        }
+        ScreenRefresh(board->screen);
+
+        vTaskDelayUntil(&lastFrame, pdMS_TO_TICKS(kRefreshMs));
     }
 }
 
-void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
-    if (*units > 0) {
-        (*units)--;
-    } else {
-        if (*tens > 0) {
-            (*tens)--;
-            // Establecer unidades al máximo permitido para la nueva decena
-            *units = GetMaxUnits(*tens, max_tens, max_units);
-        } else {
-            // Ir al valor máximo permitido
-            *tens = max_tens;
-            *units = GetMaxUnits(*tens, max_tens, max_units);
+void StateTask(void * pointer) {
+    (void)pointer; // no usamos argumentos; evitamos puntero NULL
+    EventBits_t events;
+    for (;;) {
+        events = xEventGroupWaitBits(
+            keyEventGroup, BTN_ACCEPT | BTN_CANCEL | BTN_SET_TIME | BTN_SET_ALARM | BTN_DECREMENT | BTN_INCREMENT,
+            pdTRUE,  // clearOnExit
+            pdFALSE, // waitForAllBits
+            portMAX_DELAY);
+
+        if (events & BTN_ACCEPT) {
+            if (mode == SHOW_TIME) {
+                if (ClockIsAlarmRinging(clock)) {
+                    ClockSnoozeAlarm(clock, 5);
+                    DigitalOutputDesactivate(board->ledRed);
+                } else if (!ClockIsAlarmEnabled(clock)) {
+                    ClockAlarmAction(clock, ALARM_ENABLE);
+                }
+            } else if (mode == SET_CURRENT_MINUTES) {
+                ChangeMode(SET_CURRENT_HOURS);
+            } else if (mode == SET_CURRENT_HOURS) {
+                SetHourMinuteBCD(&hour, digits);
+                ClockSetTime(clock, &hour);
+                ChangeMode(SHOW_TIME);
+            } else if (mode == SET_ALARM_MINUTES) {
+                ChangeMode(SET_ALARM_HOURS);
+            } else if (mode == SET_ALARM_HOURS) {
+                SetHourMinuteBCD(&alarm, digits);
+                ClockSetAlarm(clock, &alarm);
+                ChangeMode(SHOW_TIME);
+            }
+        }
+
+        if (events & BTN_CANCEL) {
+            if (mode == SHOW_TIME) {
+                if (ClockIsAlarmRinging(clock)) {
+                    ClockAlarmAction(clock, ALARM_CANCEL);
+                    DigitalOutputDesactivate(board->ledRed);
+                } else if (ClockIsAlarmEnabled(clock)) {
+                    ClockAlarmAction(clock, ALARM_DISABLE);
+                }
+            } else if (mode == SET_CURRENT_MINUTES || mode == SET_CURRENT_HOURS) {
+                if (ClockGetTime(clock, &hour)) {
+                    ChangeMode(SHOW_TIME);
+                } else {
+                    ChangeMode(UNCONFIGURED);
+                }
+            } else if (mode == SET_ALARM_MINUTES || mode == SET_ALARM_HOURS) {
+                ChangeMode(SHOW_TIME);
+            }
+        }
+
+        if (events & BTN_SET_TIME) {
+            ChangeMode(SET_CURRENT_MINUTES);
+            ClockGetTime(clock, &hour);
+            GetHourMinuteBCD(&hour, digits);
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        }
+
+        if (events & BTN_SET_ALARM) {
+            ChangeMode(SET_ALARM_MINUTES);
+            ClockGetAlarm(clock, &alarm);
+            GetHourMinuteBCD(&alarm, digits);
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        }
+
+        if (events & BTN_DECREMENT) {
+            if (mode == SET_CURRENT_MINUTES || mode == SET_ALARM_MINUTES) {
+                BcdDecrement(&digits[3], &digits[2], 9, 5);
+            } else if (mode == SET_CURRENT_HOURS || mode == SET_ALARM_HOURS) {
+                BcdDecrement(&digits[1], &digits[0], 3, 2);
+            }
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
+        }
+
+        if (events & BTN_INCREMENT) {
+            if (mode == SET_CURRENT_MINUTES || mode == SET_ALARM_MINUTES) {
+                BcdIncrement(&digits[3], &digits[2], 9, 5);
+            } else if (mode == SET_CURRENT_HOURS || mode == SET_ALARM_HOURS) {
+                BcdIncrement(&digits[1], &digits[0], 3, 2);
+            }
+            ScreenWriteBCD(board->screen, digits, sizeof(digits));
         }
     }
 }
@@ -174,52 +268,73 @@ void BcdDecrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t ma
 /* === Public function implementation ========================================================= */
 
 int main(void) {
-    QueueHandle_t dataTime;
-    QueueHandle_t dataState;
-    EventGroupHandle_t keyEvents;
-    SemaphoreHandle_t mutex;
 
     board = BoardCreate();
+    SysTickInit(1000);
     clock = ClockCreate(1000, AlarmRinging);
 
-    dataTime = xQueueCreate(10, sizeof(clockTimeT));
-    dataState = xQueueCreate(10, sizeof(clockStates));
-    keyEvents = xEventGroupCreate();
-    mutex = xSemaphoreCreateMutex();
+    hourMutex = xSemaphoreCreateMutex();
+    keyEventGroup = xEventGroupCreate();
 
-    refreshTaskArgT refreshArgs = malloc(sizeof(struct refreshTaskArgS));
-    refreshArgs->dataTime = dataTime;
-    refreshArgs->dataState = dataState;
-    refreshArgs->mutex = mutex;
-    refreshArgs->display = board->screen;
-    refreshArgs->clk = clock;
+    keyTaskArgT accept = malloc(sizeof(struct keyTaskArgS));
+    keyTaskArgT cancel = malloc(sizeof(struct keyTaskArgS));
+    keyTaskArgT setTime = malloc(sizeof(struct keyTaskArgS));
+    keyTaskArgT setAlarm = malloc(sizeof(struct keyTaskArgS));
+    keyTaskArgT decrement = malloc(sizeof(struct keyTaskArgS));
+    keyTaskArgT increment = malloc(sizeof(struct keyTaskArgS));
 
-    timeTaskArgT timeArgs = malloc(sizeof(struct timeTaskArgS));
-    timeArgs->events = keyEvents;
-    timeArgs->accept = BTN_ACCEPT;
-    timeArgs->cancel = BTN_CANCEL;
-    timeArgs->setTime = BTN_SET_TIME;
-    timeArgs->setAlarm = BTN_SET_ALARM;
-    timeArgs->increment = BTN_INCREMENT;
-    timeArgs->decrement = BTN_DECREMENT;
-    timeArgs->elapsed = dataTime;
-    timeArgs->states = dataState;
-    timeArgs->clock = clock;
+    accept->events = keyEventGroup;
+    accept->gpio = board->accept;
+    accept->shortPulse = BTN_ACCEPT;
+    accept->longPulse = 0;
 
-    keyTaskArgT keyArgs = malloc(sizeof(struct keyTaskArgS));
-    keyArgs->events = keyEvents;
-    keyArgs->gpio = board->setTime;
-    keyArgs->shortPulse = BTN_SET_TIME;
+    cancel->events = keyEventGroup;
+    cancel->gpio = board->cancel;
+    cancel->shortPulse = BTN_CANCEL;
+    cancel->longPulse = 0;
 
-    xTaskCreate(RefreshTask, "RefreshTask", configMINIMAL_STACK_SIZE, refreshArgs, tskIDLE_PRIORITY + 3, NULL);
-    xTaskCreate(TimeTask, "TimeTask", configMINIMAL_STACK_SIZE, timeArgs, tskIDLE_PRIORITY + 1, NULL);
-    xTaskCreate(DisplayTask, "DisplayTask", configMINIMAL_STACK_SIZE, refreshArgs, tskIDLE_PRIORITY + 1, NULL);
-    xTaskCreate(TimeRefresh, "TimeRefresh", configMINIMAL_STACK_SIZE, timeArgs, tskIDLE_PRIORITY + 3, NULL);
-    xTaskCreate(KeyTask, "KeyTask", configMINIMAL_STACK_SIZE, keyArgs, tskIDLE_PRIORITY + 2, NULL);
+    setTime->events = keyEventGroup;
+    setTime->gpio = board->setTime;
+    setTime->shortPulse = BTN_SET_TIME;
+    setTime->longPulse = BTN_SET_TIME_LONG;
+
+    setAlarm->events = keyEventGroup;
+    setAlarm->gpio = board->setAlarm;
+    setAlarm->shortPulse = BTN_SET_ALARM;
+    setAlarm->longPulse = BTN_SET_ALARM_LONG;
+
+    decrement->events = keyEventGroup;
+    decrement->gpio = board->decrement;
+    decrement->shortPulse = BTN_DECREMENT;
+    decrement->longPulse = 0;
+
+    increment->events = keyEventGroup;
+    increment->gpio = board->increment;
+    increment->shortPulse = BTN_INCREMENT;
+    increment->longPulse = 0;
+
+    // Cargar hora en variable global y escribir buffer
+    ClockGetTime(clock, &hour);
+    GetHourMinuteBCD(&hour, digits);
+    ScreenWriteBCD(board->screen, digits, sizeof(digits));
+
+    // Modo inicial (si querés parpadeo de todos)
+    ChangeMode(UNCONFIGURED);
+
+    // Tareas principales
+    xTaskCreate(TimeTask, "TimeTask", configMINIMAL_STACK_SIZE * 2, NULL, tskIDLE_PRIORITY + 4, NULL);
+    xTaskCreate(RefreshTask, "DisplayTask", configMINIMAL_STACK_SIZE * 2, NULL, tskIDLE_PRIORITY + 3, NULL);
+    xTaskCreate(StateTask, "StateTask", configMINIMAL_STACK_SIZE * 2, NULL, tskIDLE_PRIORITY + 3, NULL);
+    xTaskCreate(KeyTask, "KeyAccept", configMINIMAL_STACK_SIZE * 2, accept, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(KeyTask, "KeyCancel", configMINIMAL_STACK_SIZE * 2, cancel, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(KeyTask, "KeySetTime", configMINIMAL_STACK_SIZE * 2, setTime, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(KeyTask, "KeySetAlarm", configMINIMAL_STACK_SIZE * 2, setAlarm, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(KeyTask, "KeyDecrement", configMINIMAL_STACK_SIZE * 2, decrement, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(KeyTask, "KeyIncrement", configMINIMAL_STACK_SIZE * 2, increment, tskIDLE_PRIORITY + 1, NULL);
 
     vTaskStartScheduler();
-
-    while(true);
+    while (true);
+    return 0;
 }
 
 /* === End of documentation ==================================================================== */

@@ -68,7 +68,7 @@ typedef struct screenDriverS {
  *
  * @param digits    Número de dígitos del display.
  * @param driver    Puntero a la estructura que contiene las funciones del driver del display.
- * 
+ *
  * @return screenT Puntero a la nueva instancia de la pantalla.
  */
 screenT ScreenCreate(uint8_t digits, screenDriverT driver);
@@ -96,12 +96,27 @@ void ScreenRefresh(screenT self);
  * @param from          Posición del primer dígito desde el cual se comenzará a parpadear.
  * @param to            Posición del último dígito hasta el cual se parpadeará.
  * @param frecuency     Frecuencia de parpadeo en milisegundos.
- * 
+ *
  * @return int Retorna 0 si la operación fue exitosa, -1 si hubo un error.
  */
 int ScreenFlashDigits(screenT screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
+/**
+ * @brief Función para alternar el estado de un punto decimal en la pantalla.
+ *
+ * @param self      Puntero a la instancia de la pantalla.
+ * @param position  Posición del punto decimal a alternar.
+ */
 void ScreenToggleDot(screenT self, uint8_t position);
+
+/**
+ * @brief Función para establecer el estado de un punto decimal en la pantalla.
+ *
+ * @param self      Puntero a la instancia de la pantalla.
+ * @param position  Posición del punto decimal a establecer.
+ * @param state     Estado a establecer (true = encendido, false = apagado).
+ */
+void ScreenSetDots(screenT self, uint8_t position, bool state);
 
 /* === End of conditional blocks =================================================================================== */
 

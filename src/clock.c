@@ -25,6 +25,7 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 
 #include "clock.h"
+#include "auxiliar.h"
 #include <string.h>
 
 /* === Macros definitions ========================================================================================== */
@@ -69,18 +70,6 @@ static bool IsValidTime(const clockTimeT * time);
  * @param minutes  Cantidad de minutos para posponer la alarma.
  */
 static void AlarmPospone(clockT self, uint8_t minutes);
-
-/**
- * @brief  Incrementa un valor en formato BCD (Binary-Coded Decimal).
- *
- * @param units  Puntero al dígito de unidades.
- * @param tens  Puntero al dígito de decenas.
- * @param max_units  Valor máximo para el dígito de unidades.
- * @param max_tens  Valor máximo para el dígito de decenas.
- * @return true Si se ha producido un desbordamiento y se ha incrementado el dígito de decenas.
- * @return false Si no hay desbordamiento.
- */
-static bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens);
 
 /**
  * @brief  Verifica si ha pasado un nuevo día comparando la hora previa con la actual.
@@ -148,19 +137,6 @@ static void AlarmPospone(clockT self, uint8_t minutes) {
 
     self->alarm.time.hours[1] = dec_hours / 10;
     self->alarm.time.hours[0] = dec_hours % 10;
-}
-
-static bool BcdIncrement(uint8_t * units, uint8_t * tens, uint8_t max_units, uint8_t max_tens) {
-    (*units)++;
-    if (*units > max_units) {
-        *units = 0;
-        (*tens)++;
-        if (*tens > max_tens) {
-            *tens = 0;
-            return true;
-        }
-    }
-    return false;
 }
 
 static bool IsNewDay(clockTimeT prev) {

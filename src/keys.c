@@ -29,7 +29,7 @@ SPDX-License-Identifier: MIT
 /* === Macros definitions ========================================================================================== */
 
 #define LONG_MS       3000
-#define SCAN_DELAY_MS 40
+#define SCAN_DELAY_MS 150
 
 /* === Private data type declarations ============================================================================== */
 
@@ -46,7 +46,7 @@ typedef enum { KEY_STATE_IDLE, KEY_STATE_PRESSED } keyState;
 /* === Public function implementation ============================================================================== */
 
 void KeyTask(void * pointer) {
-    keyTaskArgT args = pointer;
+    keyTaskArgT args = (keyTaskArgT)pointer;
     static keyState state = KEY_STATE_IDLE;
     static TickType_t startTick = 0;
 
