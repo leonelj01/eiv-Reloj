@@ -155,6 +155,14 @@ int ScreenFlashDigits(screenT self, uint8_t from, uint8_t to, uint16_t divisor) 
     return result;
 }
 
+void ScreenSetDots(screenT self, uint8_t position, bool state) {
+    if (state) {
+        self->value[position] |= SEGMENT_DP;
+    } else {
+        self->value[position] &= ~SEGMENT_DP;
+    }
+}
+
 void ScreenToggleDot(screenT self, uint8_t position) {
     self->value[position] ^= SEGMENT_DP;
 }
